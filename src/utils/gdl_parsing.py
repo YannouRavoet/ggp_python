@@ -15,8 +15,8 @@ from problog.logic import (
     Clause,
     Var,
     Or,
-    Not,
-    Constant
+    Constant,
+    Not
 )
 
 
@@ -96,26 +96,40 @@ class GDLtoProbLogParser(GDLParser):
             if name == 'or':
                 return Or(args[0], args[1])
             elif name == 'not':
-                return Term('\+', args[0])
+                return Not('\+', args[0])
             elif name == 'distinct':
                 return Term('\+', Term('=', *args))
+            elif name == 'true':
+                return args[0]
             return Term(name, *args)
 
     @staticmethod
     def _statements_action(toks):
-        statements = ''
-        for statement in toks.statements:
-            statements += str(statement) +'.\n'
-        return statements
+        return list(toks.statements)
 
 
-def parse_file(file):
+def read_rules(gdl_file):
     """
-    Parses a GDL file into a ProbLog program represented by a string
-    :param file: GDL file location
-    :return: str
+    Reads the rules of a GDL/KIF file into a string
+    :param gdl_file: file location pf game rules in KIF format (Knowledge Interchange Format)
+    :return: string of game rules in GDL format
     """
-    with open(file) as f:
-        rules = '\n'.join(line for line in (line.strip() for line in f.readlines())
+    with open(gdl_file) as f:
+        gdl_rules = '\n'.join(line for line in (line.strip() for line in f.readlines())
                           if line and not line.startswith(';'))
-    return GDLtoProbLogParser().statements.parseString(rules, parseAll=True).statements
+    return gdl_rules
+
+def parse_rules_string(gdl_rules):
+    """
+    Parses a given string of gdl_rules into a string of equivalent problog_rules.
+    :param gdl_rules: string of game rules in KIF format (Knowledge Interchange Format)
+    :return: string of game rules in ProbLog format
+    """
+    return term_list_to_string(parse_rules_term_list(gdl_rules))
+
+def term_list_to_string(term_list):
+    return '\n'.join([str(term)+'.' for term in term_list])
+
+def parse_rules_term_list(gdl_rules):
+    return list(GDLtoProbLogParser().statements.parseString(gdl_rules, parseAll=True))
+
