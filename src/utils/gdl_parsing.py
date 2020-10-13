@@ -53,19 +53,19 @@ class GDLParser():
 class GDLtoProbLogParser(GDLParser):
     def __init__(self):
         super().__init__()
-        self.variables = {}
-
-        def variable_action(toks):
-            return Var('_' + toks.variable[0])
-
-        def statement_action(toks):
-            return toks.statement
-
-        self.variable.addParseAction(variable_action)
+        self.variable.addParseAction(self._variable_action)
         self.constant.addParseAction(self._constant_action)
         self.compound_term.addParseAction(self._compound_term_action)
-        self.statement.addParseAction(statement_action)
+        self.statement.addParseAction(self._statement_action)
         self.statements.addParseAction(self._statements_action)
+
+    @staticmethod
+    def _variable_action(toks):
+        return Var('_' + toks.variable[0])
+
+    @staticmethod
+    def _statement_action(toks):
+        return toks.statement
 
     @staticmethod
     def _constant_action(toks):

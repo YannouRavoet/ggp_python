@@ -1,37 +1,16 @@
-from utils.gdl_parsing import parse_rules_to_string, term_list_to_string
-from utils.problog import ProblogEngine
-from problog.logic import Term
 from problog.program import PrologString
-import copy
-
-class GameManager(object):
-    def __init__(self):
-        self.games = dict()
-
-    def add_game(self, gameID, gdl_rules, startclock, playclock):
-        self.games[gameID] = Game(gameID, gdl_rules, startclock, playclock)
-        return self.games[gameID]
-
-    def get_game(self, gameID):
-        return self.games[gameID]
-
-    def add_player(self, gameID):
-        game = self.get_game(gameID)
-
-
+from problog.logic import Term
+from utils.problog import ProblogEngine
+from utils.gdl_parsing import parse_rules_to_string, term_list_to_string
 
 class Game(object):
-    def __init__(self, gameID, gdl_rules, startclock, playclock):
-        self.gameID = gameID
+    def __init__(self, gdl_rules):
         self.gdl_rules = gdl_rules
         self.problog_rules = parse_rules_to_string(gdl_rules)
         self.engine = ProblogEngine(self.problog_rules)
-        self.startclock = startclock
-        self.playclock = playclock
 
-        self.base = self.get_base()
-        self.state = self.get_init()
         self.roles = self.get_roles()
+        self.state = self.get_init()
 
     def get_base(self):
         # List of base propositions of the game. Every state is defined as a subset of this list.
@@ -47,6 +26,10 @@ class Game(object):
         # List of all possible actions of a role. Legal actions are defined as a subset of this list.
         return self.engine.query(Term('input', *[role, None]))
 
+    def apply_moves(self, moves):
+        self.state = self.state.apply_moves(moves)
+
+
 class State(object):
     def __init__(self, game, facts):
         """
@@ -57,7 +40,6 @@ class State(object):
         """
         self.game = game
         self.problog_state = PrologString(term_list_to_string(facts))
-        # TODO: check if copy is deep enough (copy.deepcopy is not supported by DefaultEngine()).
         self.engine = ProblogEngine(self.game.problog_rules)
         self.engine.extend(self.problog_state)
 
@@ -71,35 +53,24 @@ class State(object):
         :return: State representing the resulting state
         """
         roles = self.game.roles
-        assert(len(moves) == len(roles))
-        action_terms = []
+        assert (len(moves) == len(roles))
+        # TODO: check whether moves are legal, and replace with legal moves if necessary
 
         # 1. Extend engine.db with actions
+        action_terms = []
         for i in range(len(moves)):
-            action_terms.append('does('+str(roles[i])+','+str(moves[i])+')')
+            action_terms.append('does(' + str(roles[i]) + ',' + str(moves[i]) + ')')
         self.engine.extend(PrologString(term_list_to_string(action_terms)))
 
         # 2. Inference next state
         next_facts = self.engine.query(Term('next', None))
         return State(self.game, next_facts)
 
+    def is_terminal(self):
+        """
+        :return: Whether the state is terminal
+        """
+        return self.engine.query(Term('terminal'))
 
-class Player(object):
-    def __int__(self, name, gdl_rules, role):
-        self.name = name
-        self.role = role
-
-
-
-    # (START MATCHID ROLE GAMEDESCRIPTION STARTCLOCK PLAYCLOCK)
-    def cmd_start(self):
-        pass
-
-    # (PLAY MATCHID JOINTMOVE)
-    def cmd_play(self):
-        pass
-
-    # (STOP MATCHID JOINTMOVE)
-    def cmd_stop(self):
-        pass
-
+    def get_goal(self, role):
+        return self.engine.query(Term('goal', *[role, None]))

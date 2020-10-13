@@ -15,8 +15,11 @@ class ProblogEngine():
         :return: a list of Terms
         """
         results = self.engine.query(self.db, query_term)
-        results = [result[query_term.args.index(None)] for result in results]
-        return results
+        if len(query_term.args) > 0:
+            return [result[query_term.args.index(None)] for result in results]
+        else:
+            # when querying a fact we are only looking at whether it is true or not (f.e. terminal)
+            return len(results) != 0
 
     def extend(self, prolog_string):
         for statement in prolog_string:
