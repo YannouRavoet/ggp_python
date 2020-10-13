@@ -1,6 +1,5 @@
 from utils.ggp_utils import Game
 
-
 class Player(object):
     def __init__(self):
         self.role = None
@@ -40,6 +39,8 @@ class Player(object):
     # (STOP GAMEID MOVES)
     def handle_stop(self, gamemanager, msg):
         print(f'{self.role}: stop msg received')
+        self.game.state = self.game.state.apply_moves(msg['moves'])
+        print(f'{self.role} reward = {self.game.state.get_goal(self.role)}')
         self.__init__()
         gamemanager.rcv_msg(self, 'done')
 
@@ -57,9 +58,12 @@ class LegalPlayer(Player):
         gamemanager.rcv_msg(self, chosen_action)
 
 
+import random
 class RandomPlayer(Player):
     def handle_play(self, gamemanager, msg):
-        pass
+        super().handle_play(gamemanager, msg)
+        chosen_action = random.choice(self.game.state.get_legal_actions(self.role))
+        gamemanager.rcv_msg(self, chosen_action)
 
 class HumanPlayer(Player):
     def handle_play(self, gamemanager, msg):

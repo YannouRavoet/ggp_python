@@ -1,6 +1,6 @@
 from utils.gdl_parsing import read_rules
 from game_manager import GameManagerGDL
-from game_player import LegalPlayer
+from game_player import LegalPlayer, RandomPlayer
 
 
 if __name__ == "__main__":
@@ -14,8 +14,8 @@ if __name__ == "__main__":
     all_actions_white = game.get_actions(roles[0])
     all_actions_black = game.get_actions(roles[1])
 
-    player0 = LegalPlayer()
-    player1 = LegalPlayer()
+    player0 = RandomPlayer()
+    player1 = RandomPlayer()
     gm.add_player(gameID, roles[0], player0)
     gm.add_player(gameID, roles[1], player1)
 
