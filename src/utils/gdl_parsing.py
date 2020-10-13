@@ -56,19 +56,9 @@ class GDLtoProbLogParser(GDLParser):
         self.variables = {}
 
         def variable_action(toks):
-            variable_name = toks.variable[0]
-            try:
-                # if the variable is already part of the statement yet, nothing has to be done
-                return self.variables[variable_name]
-            except KeyError:
-                # else, add it
-                var = Var('_'+variable_name)
-                self.variables[variable_name] = var
-                return var
+            return Var('_' + toks.variable[0])
 
         def statement_action(toks):
-            # Reset variables after each statement
-            self.variables = {}
             return toks.statement
 
         self.variable.addParseAction(variable_action)
@@ -86,7 +76,6 @@ class GDLtoProbLogParser(GDLParser):
         name = toks.compound_term.name
         args = toks.compound_term.arguments
 
-        # Translate GDL rule operator to Prolog rule operator
         if name == '<=':
             head = args[0]
             body = reduce(lambda b, a: a & b, reversed(args[1:]))
@@ -116,10 +105,11 @@ def read_rules(gdl_file):
     """
     with open(gdl_file) as f:
         gdl_rules = '\n'.join(line for line in (line.strip() for line in f.readlines())
-                          if line and not line.startswith(';'))
+                              if line and not line.startswith(';'))
     return gdl_rules
 
-def parse_rules_string(gdl_rules):
+
+def parse_rules_to_string(gdl_rules):
     """
     Parses a given string of gdl_rules into a string of equivalent problog_rules.
     :param gdl_rules: string of game rules in KIF format (Knowledge Interchange Format)
@@ -127,9 +117,10 @@ def parse_rules_string(gdl_rules):
     """
     return term_list_to_string(parse_rules_term_list(gdl_rules))
 
+
 def term_list_to_string(term_list):
-    return '\n'.join([str(term)+'.' for term in term_list])
+    return '\n'.join([str(term) + '.' for term in term_list])
+
 
 def parse_rules_term_list(gdl_rules):
     return list(GDLtoProbLogParser().statements.parseString(gdl_rules, parseAll=True))
-
