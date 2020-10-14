@@ -53,71 +53,68 @@ class GameManagerGDL(object):
 
     def add_game(self, gdl_rules, startclock, playclock):
         def generate_game_id():
-            gameId = ''.join(random.choices(string.ascii_lowercase + string.digits, k=5))
-            return gameId if gameId not in self.games.keys() else generate_game_id()
+            matchID = ''.join(random.choices(string.ascii_lowercase + string.digits, k=5))
+            return matchID if matchID not in self.games.keys() else generate_game_id()
 
-        gameID = generate_game_id()
-        self.games[gameID] = GM_GameEntry(gdl_rules, startclock, playclock)
-        return gameID
+        matchID = generate_game_id()
+        self.games[matchID] = GM_GameEntry(gdl_rules, startclock, playclock)
+        return matchID
 
-    def get_game(self, gameID):
-        self._assert_gameID(gameID)
-        return self.games[gameID].game
+    def get_game(self, matchID):
+        self._assert_matchID(matchID)
+        return self.games[matchID].game
 
-    def get_players(self, gameID):
-        self._assert_gameID(gameID)
-        return self.games[gameID].players
+    def get_players(self, matchID):
+        self._assert_matchID(matchID)
+        return self.games[matchID].players
 
-    def add_player(self, gameID, role, player):
-        self._assert_gameID(gameID)
-        self.games[gameID].add_player(role, player)
+    def add_player(self, matchID, role, player):
+        self._assert_matchID(matchID)
+        self.games[matchID].add_player(role, player)
 
-    def _assert_gameID(self, gameID):
-        return gameID in self.games.keys()
+    def _assert_matchID(self, matchID):
+        return matchID in self.games.keys()
 
-    def msg_start(self, gameID):
-        gdl_rules = self.get_game(gameID).gdl_rules
-        startclock = self.games[gameID].startclock
-        playclock = self.games[gameID].playclock
-        for role, playerentry in self.games[gameID].players.items():
-            print(f'GM(TX): start msg to {role}')
+    def msg_start(self, matchID):
+        gdl_rules = self.get_game(matchID).gdl_rules
+        startclock = self.games[matchID].startclock
+        playclock = self.games[matchID].playclock
+        for role, playerentry in self.games[matchID].players.items():
+            print(f'GM to {role}: start({matchID}, {role}, rules, {startclock}, {playclock})')
             playerentry.status = PlayerStatus.AwaitingReady
             playerentry.player.rcv_msg(self, {'type': 'start',
-                                              'gameID': gameID,
+                                              'matchID': matchID,
                                               'role': role,
                                               'rules': gdl_rules,
                                               'startclock': startclock,
                                               'playclock': playclock})
 
-    def msg_play(self, gameID, moves):
-        for playerentry in self.games[gameID].players.values():
+    def msg_play(self, matchID, moves):
+        for playerentry in self.games[matchID].players.values():
             playerentry.status = PlayerStatus.AwaitingAction
-        for role, playerentry in self.games[gameID].players.items():
-            print(f'GM(TX): play msg to {role}')
+        for role, playerentry in self.games[matchID].players.items():
+            print(f'GM to {role}: play({matchID}, {moves})')
             playerentry.player.rcv_msg(self, {'type': 'play',
-                                              'gameID': gameID,
+                                              'matchID': matchID,
                                               'moves': moves})
 
-    def msg_stop(self, gameID, moves):
-        for role, playerentry in self.games[gameID].players.items():
-            print(f'GM(TX): stop msg to {role}')
+    def msg_stop(self, matchID, moves):
+        for role, playerentry in self.games[matchID].players.items():
+            print(f'GM to {role}: stop({matchID}, {moves}) ')
             playerentry.status = PlayerStatus.AwaitingDone
             playerentry.player.rcv_msg(self, {'type': 'stop',
-                                              'gameID': gameID,
+                                              'matchID': matchID,
                                               'moves': moves})
 
     def rcv_msg(self, player, msg):
         gid, ge, role, pe = self.find_entry(player)
         if msg == 'ready':
-            print(f'GM(RX): ready msg received from {role}')
             pe.status = PlayerStatus.Ready
             if ge.all_players_are(PlayerStatus.Ready):
                 self.msg_play(gid, 'nil')
         elif msg == 'done':
-            print(f'GM(RX): done msg received from {role}')
             pe.status = PlayerStatus.Idle
         else:
-            print(f'GM(RX): {msg} msg received from {role}')
             pe.status = PlayerStatus.PassedAction
             pe.action = msg
             if ge.all_players_are(PlayerStatus.PassedAction):
@@ -126,7 +123,7 @@ class GameManagerGDL(object):
                 self.msg_stop(gid, moves) if ge.game.state.is_terminal() else self.msg_play(gid, moves)
 
     def find_entry(self, player):
-        for gameid, gameentry in self.games.items():
+        for matchID, gameentry in self.games.items():
             for role, playerentry in gameentry.players.items():
                 if playerentry.player == player:
-                    return gameid, gameentry, role, playerentry
+                    return matchID, gameentry, role, playerentry
