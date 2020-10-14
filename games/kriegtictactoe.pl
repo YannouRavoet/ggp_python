@@ -35,8 +35,6 @@ next(cell(_m,_n,x)) :- cell(_m,_n,x).
 next(cell(_m,_n,o)) :- cell(_m,_n,o).
 next(cell(_m,_n,b)) :- cell(_m,_n,b), \+marked(_m,_n).
 marked(_m,_n) :- does(_r,mark(_m,_n)).
-percept(white,ok).
-percept(black,ok).
 sees(_r,ok) :- does(_r,mark(_m,_n)), cell(_m,_n,b), does(_s,mark(_j,_k)), \+(=(_r,_s)), (\+(=(_m,_j)); \+(=(_n,_k))).
 sees(white,ok) :- does(white,mark(_m,_n)), cell(_m,_n,b), does(random,tiebreak(x)).
 sees(black,ok) :- does(black,mark(_m,_n)), cell(_m,_n,b), does(random,tiebreak(o)).
@@ -59,3 +57,4 @@ line(_x) :- row(_m,_x).
 line(_x) :- column(_m,_x).
 line(_x) :- diagonal(_x).
 open :- cell(_m,_n,b).
+tried(_r,_m,_n) :- fail.

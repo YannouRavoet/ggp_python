@@ -2,6 +2,8 @@ from problog.program import PrologString
 from problog.logic import Term
 from utils.problog import ProblogEngine
 from utils.gdl_parsing import parse_rules_to_string, term_list_to_string
+import random
+
 
 class Game(object):
     def __init__(self, gdl_rules):
@@ -9,68 +11,82 @@ class Game(object):
         self.problog_rules = parse_rules_to_string(gdl_rules)
         self.engine = ProblogEngine(self.problog_rules)
 
+        self.turn = 0
         self.roles = self.get_roles()
-        self.state = self.get_init()
+        self.state = State(self.problog_rules, term_list_to_string(self.get_init()))
 
     def get_base(self):
-        # List of base propositions of the game. Every state is defined as a subset of this list.
         return self.engine.query(Term('base', None))
 
     def get_init(self):
-        return State(self, self.engine.query(Term('init', None)))
+        return self.engine.query(Term('init', None))
 
     def get_roles(self):
         return self.engine.query(Term('role', None))
 
     def get_actions(self, role):
-        # List of all possible actions of a role. Legal actions are defined as a subset of this list.
         return self.engine.query(Term('input', *[role, None]))
 
-    def apply_moves(self, moves):
-        self.state = self.state.apply_moves(moves)
+    def extend_state_with_moves(self, moves):
+        for i in range(len(moves)):
+            is_legal = self.engine.query(Term('legal',*[moves[i].args[0], moves[i].args[1]]))
+            if not is_legal:
+                moves[i] = random.choice(self.engine.query(Term('legal', *[moves[i].args[0], None])))
+        self.state.add_facts(moves)
+
+    def extend_state_with_facts(self, facts):
+        self.state.add_facts(facts)
+
+    def calc_next_state(self):
+        self.state = State(self.problog_rules, term_list_to_string(self.state.get_next()))
+        self.turn += 1
 
 
 class State(object):
-    def __init__(self, game, facts):
+    def __init__(self, problog_rules, problog_facts):
         """
-        A state is represented by a subset of the base facts.
-        That subset of facts is true in the state and determines the possible moves and terminality of the state.
-        :param problog_rules: The problog rules that determine legality of actions, terminality of states and goal utility.
-        :param facts: The subset of facts that is true in this state
+        A state is represented by a set of the true facts that determine the legality of moves
+        and the terminality and goal utility of states.
+        :param problog_rules: The set of rules containing at the minimum legal/2, next/1, terminal/0, goal/2.
+        :param problog_facts: The set of facts that are true in this state.
         """
-        self.game = game
-        self.problog_state = PrologString(term_list_to_string(facts))
-        self.engine = ProblogEngine(self.game.problog_rules)
-        self.engine.extend(self.problog_state)
+        self.problog_rules = problog_rules
+        self.problog_state = problog_facts
+        self.engine = ProblogEngine(f'{self.problog_rules}\n{self.problog_state}')
 
     def get_legal_actions(self, role):
         return self.engine.query(Term('legal', *[role, None]))
 
-    def apply_moves(self, moves):
+    def get_percepts(self, role):
         """
-        Applies the provided moves to the current state and returns a State object representing the resulting state.
-        :param moves: A List of moves of size len(roles)
-        :return: State representing the resulting state
+        Returns the percepts of a role as declared by the sees/2 clause.
+        It is assumed apply_moves has been called (aka the necessary does/2 facts have been added to the program).
+        :param role: Term representing the role of interest
+        :return: list of Terms representing the percepts of the role.
         """
-        roles = self.game.roles
-        assert (len(moves) == len(roles))
-        # TODO: check whether moves are legal, and replace with legal moves if necessary
+        return self.engine.query(Term('sees', *[role, None]))
 
-        # 1. Extend engine.db with actions
-        action_terms = []
-        for i in range(len(moves)):
-            action_terms.append('does(' + str(roles[i]) + ',' + str(moves[i]) + ')')
-        self.engine.extend(PrologString(term_list_to_string(action_terms)))
+    def add_facts(self, facts):
+        self.engine.extend(PrologString(term_list_to_string(facts)))
 
-        # 2. Inference next state
-        next_facts = self.engine.query(Term('next', None))
-        return State(self.game, next_facts)
+    def get_next(self):
+        """
+        Returns the facts of the next state as declared by the next/1 clause.
+        It is assumed apply_moves has been called (aka the necessary does/2 facts have been added to the program).
+        :return: list of Terms representing the facts of the next state.
+        """
+        return self.engine.query(Term('next', None))
 
     def is_terminal(self):
         """
-        :return: Whether the state is terminal
+        :return: Whether the state is terminal or not.
+        :type return: bool
         """
         return self.engine.query(Term('terminal'))
 
     def get_goal(self, role):
         return self.engine.query(Term('goal', *[role, None]))
+
+
+def make_move_term(role, move):
+    return Term('does', *[role, move])

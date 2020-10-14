@@ -28,3 +28,6 @@ terminal :- step(4).
 goal(random,100).
 goal(candidate,100) :- chosen(_d), car(_d).
 goal(candidate,0) :- chosen(_d), \+car(_d).
+car(_d) :- fail.
+chosen(_d) :- fail.
+sees(random,does(_r,_m)) :- does(_r,_m).
