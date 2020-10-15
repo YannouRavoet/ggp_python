@@ -4,7 +4,7 @@ from game_player import LegalGamePlayer, RandomGamePlayer, HumanGamePlayer
 
 
 if __name__ == "__main__":
-    game_rules = read_rules('../games/tictactoe.gdl')
+    game_rules = read_rules('../games/connectfour.gdl')
 
     gm = GameManager_GDL()
     gameID = gm.add_game(game_rules, 600, 30)
