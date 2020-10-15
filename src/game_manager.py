@@ -98,8 +98,8 @@ class GameManager_GDL(object):
 
         joint_moves = list(
             filter(lambda move: move is not None, map(lambda p: p.move, self.matches[matchID].players)))
+        print(f'GM to players: play({matchID}, {joint_moves})')
         for pe in self.matches[matchID].players:
-            print(f'GM to {pe.role}: play({matchID}, {joint_moves})')
             pe.player.rcv_msg(self, {'type': 'play',
                                      'matchID': matchID,
                                      'moves': joint_moves})
@@ -113,8 +113,8 @@ class GameManager_GDL(object):
         joint_moves = list(
             filter(lambda move: move is not None, map(lambda pe: pe.move, self.matches[matchID].players)))
 
+        print(f'GM to players: stop({matchID}, {joint_moves})')
         for pe in self.matches[matchID].players:
-            print(f'GM to {pe.role}: stop({matchID}, {joint_moves}) ')
             pe.player.rcv_msg(self, {'type': 'stop',
                                      'matchID': matchID,
                                      'moves': joint_moves})
