@@ -1,7 +1,7 @@
 from utils.ggp_utils import Game, make_move_term
 import random
 
-class Player(object):
+class GamePlayer(object):
     def __init__(self):
         self.role = None
         self.game = None
@@ -11,10 +11,10 @@ class Player(object):
     def apply_moves_percepts(self, msg):
         moves = list(filter(lambda m: m is not None, msg['moves']))
         if len(moves) == len(self.game.roles):  # GDL
-            self.game.extend_state_with_moves([make_move_term(role, move) for role, move in zip(self.game.roles, moves)])
+            self.game.extend_state_with_facts([make_move_term(role, move) for role, move in zip(self.game.roles, moves)])
             self.game.calc_next_state()
         elif len(moves) == 1:   # GDL-II
-            self.game.extend_state_with_moves([make_move_term(self.role, moves[0])])
+            self.game.extend_state_with_facts([make_move_term(self.role, moves[0])])
             self.game.extend_state_with_facts(msg['percepts'])
             self.game.calc_next_state()
         elif len(moves) > 0:
@@ -54,19 +54,19 @@ class Player(object):
         gamemanager.rcv_msg(self, 'done')
 
 
-class LegalPlayer(Player):
+class LegalGamePlayer(GamePlayer):
     def choose_action(self, gamemanager):
         chosen_action = self.game.state.get_legal_actions(self.role)[0]
         gamemanager.rcv_msg(self, chosen_action)
 
 
-class RandomPlayer(Player):
+class RandomGamePlayer(GamePlayer):
     def choose_action(self, gamemanager):
         chosen_action = random.choice(self.game.state.get_legal_actions(self.role))
         gamemanager.rcv_msg(self, chosen_action)
 
 
-class HumanPlayer(Player):
+class HumanGamePlayer(GamePlayer):
     def choose_action(self, gamemanager):
         legal_actions = self.game.state.get_legal_actions(self.role)
         [print(f'{i}: {legal_actions[i]}') for i in range(len(legal_actions))]

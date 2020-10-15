@@ -27,13 +27,6 @@ class Game(object):
     def get_actions(self, role):
         return self.engine.query(Term('input', *[role, None]))
 
-    def extend_state_with_moves(self, moves):
-        for i in range(len(moves)):
-            is_legal = self.engine.query(Term('legal',*[moves[i].args[0], moves[i].args[1]]))
-            if not is_legal:
-                moves[i] = random.choice(self.engine.query(Term('legal', *[moves[i].args[0], None])))
-        self.state.add_facts(moves)
-
     def extend_state_with_facts(self, facts):
         self.state.add_facts(facts)
 

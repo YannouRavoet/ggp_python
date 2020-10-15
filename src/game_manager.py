@@ -3,7 +3,7 @@ import random
 import string
 
 from utils.ggp_utils import Game, make_move_term
-
+from problog.logic import Term
 
 class PlayerStatus(enum.Enum):
     Idle = 1  # player is cleared and not engaged in this game entry.
@@ -64,10 +64,6 @@ class GameManager_GDL(object):
         assert (matchID in self.matches.keys())
         return self.matches[matchID].game
 
-    def get_players(self, matchID):
-        assert (matchID in self.matches.keys())
-        return self.matches[matchID].players
-
     def add_player(self, matchID, role, player):
         assert (matchID in self.matches.keys())
         self.matches[matchID].add_player(role, player)
@@ -77,7 +73,7 @@ class GameManager_GDL(object):
     """""""""""""""""""""""""""""""""
 
     # (START <MATCHID> <ROLE> <DESCRIPTION> <STARTCLOCK> <PLAYCLOCK>)
-    def msg_start(self, matchID):
+    def sendmsg_start(self, matchID):
         # TODO: once player and manager run on separate threads, move this to other for loop
         for pe in self.matches[matchID].players:
             pe.status = PlayerStatus.AwaitingReady
@@ -95,7 +91,7 @@ class GameManager_GDL(object):
                                      'playclock': playclock})
 
     # (PLAY <MATCHID> <JOINTMOVES>)
-    def msg_play(self, matchID):
+    def sendmsg_play(self, matchID):
         # TODO: once player and manager run on separate threads, move this to other for loop
         for pe in self.matches[matchID].players:
             pe.status = PlayerStatus.AwaitingAction
@@ -109,7 +105,7 @@ class GameManager_GDL(object):
                                      'moves': joint_moves})
 
     # (STOP <MATCHID> <JOINTMOVES>)
-    def msg_stop(self, matchID):
+    def sendmsg_stop(self, matchID):
         # TODO: once player and manager run on separate threads, move this to other for loop
         for pe in self.matches[matchID].players:
             pe.status = PlayerStatus.AwaitingDone
@@ -129,9 +125,9 @@ class GameManager_GDL(object):
     def handle_moves(self, matchID):
         match_entry = self.matches[matchID]
         moves = [make_move_term(pe.role, pe.move) for pe in match_entry.players]
-        match_entry.game.extend_state_with_moves(moves)
+        match_entry.game.extend_state_with_facts(moves)
         match_entry.game.calc_next_state()
-        self.msg_stop(matchID) if match_entry.game.state.is_terminal() else self.msg_play(matchID)
+        self.sendmsg_stop(matchID) if match_entry.game.state.is_terminal() else self.sendmsg_play(matchID)
 
     def rcv_msg(self, player, msg):
         def find_entry():
@@ -144,13 +140,17 @@ class GameManager_GDL(object):
         if msg == 'ready':
             player_entry.status = PlayerStatus.Ready
             if match_entry.all_players_are(PlayerStatus.Ready):
-                self.msg_play(matchID)
+                self.sendmsg_play(matchID)
         elif msg == 'done':
             player_entry.status = PlayerStatus.Idle
         else:
             player_entry.status = PlayerStatus.PassedAction
             player_entry.move = msg
             if match_entry.all_players_are(PlayerStatus.PassedAction):
+                # Replace illegal moves with legal moves
+                for pe in match_entry.players:
+                    if not match_entry.game.state.engine.query(Term('legal',*[pe.role, pe.move])):
+                        pe.move = random.choice(match_entry.game.state.get_legal_actions(pe.role))
                 self.handle_moves(matchID)
 
 
@@ -161,7 +161,7 @@ class GameManager_GDLII(GameManager_GDL):
     def handle_moves(self, matchID):
         match_entry = self.matches[matchID]
         moves = [make_move_term(pe.role, pe.move) for pe in match_entry.players]
-        match_entry.game.extend_state_with_moves(moves)
+        match_entry.game.extend_state_with_facts(moves)
 
         percepts = list()
         for player_entry in match_entry.players:
@@ -169,13 +169,13 @@ class GameManager_GDLII(GameManager_GDL):
             percepts.extend(player_entry.percepts)
         match_entry.game.extend_state_with_facts(percepts)  # The Game Manager sees everything
         match_entry.game.calc_next_state()
-        self.msg_stop(matchID) if match_entry.game.state.is_terminal() else self.msg_play(matchID)
+        self.sendmsg_stop(matchID) if match_entry.game.state.is_terminal() else self.sendmsg_play(matchID)
 
     """""""""""""""""""""""""""""""""
         HANDLE OUTGOING MESSAGES
     """""""""""""""""""""""""""""""""
     # (PLAY <MATCHID> <TURN> <LASTMOVE> <PERCEPTS>)
-    def msg_play(self, matchID):
+    def sendmsg_play(self, matchID):
         match_entry = self.matches[matchID]
 
         # TODO: once player and manager run on separate threads, move this to other for loop
@@ -192,7 +192,7 @@ class GameManager_GDLII(GameManager_GDL):
                                                'percepts': player_entry.percepts})
 
     # (STOP <MATCHID> <TURN> <LASTMOVE> <PERCEPTS>)
-    def msg_stop(self, matchID):
+    def sendmsg_stop(self, matchID):
         match_entry = self.matches[matchID]
         # TODO: once player and manager run on separate threads, move this to other for loop
         for player_entry in match_entry.players:
