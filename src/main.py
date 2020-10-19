@@ -4,9 +4,11 @@ from game_player import LegalGamePlayer, RandomGamePlayer, HumanGamePlayer
 
 
 if __name__ == "__main__":
-    game_rules = read_rules('../games/tictactoe.gdl')
+    game_rules = read_rules('../games/montyhall.gdl')
+    with open('../games/montyhall.pl','w') as f:
+        f.write(parse_rules_to_string(game_rules))
 
-    gm = GameManager_GDL()
+    gm = GameManager_GDLII()
     gameID = gm.add_game(game_rules, 600, 30)
     roles = gm.get_game(gameID).roles
 

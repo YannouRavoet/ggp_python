@@ -49,7 +49,7 @@
 
     (<= (sees candidate (does candidate ?m))
         (does candidate ?m))
-    (<= (sees candidate (open_door ?d))
+    (<= (sees candidate (does random (open_door ?d)))
         (does random (open_door ?d)))
     (<= (sees candidate (car ?d))
         (true (step 3))

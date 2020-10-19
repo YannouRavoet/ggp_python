@@ -12,7 +12,7 @@ legal(candidate,noop) :- step(2).
 legal(candidate,switch) :- step(3).
 legal(candidate,noop) :- step(3).
 sees(candidate,does(candidate,_m)) :- does(candidate,_m).
-sees(candidate,open_door(_d)) :- does(random,open_door(_d)).
+sees(candidate,does(random,open_door(_d))) :- does(random,open_door(_d)).
 sees(candidate,car(_d)) :- step(3), car(_d), next_chosen(_d).
 next(car(_d)) :- does(random,hide_car(_d)).
 next(car(_d)) :- car(_d).
@@ -30,4 +30,3 @@ goal(candidate,100) :- chosen(_d), car(_d).
 goal(candidate,0) :- chosen(_d), \+car(_d).
 car(_d) :- fail.
 chosen(_d) :- fail.
-sees(random,does(_r,_m)) :- does(_r,_m).
