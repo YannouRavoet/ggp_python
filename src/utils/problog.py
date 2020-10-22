@@ -1,11 +1,12 @@
 from problog.engine import DefaultEngine
 from problog.program import PrologString
+from problog.logic import Term, Var, And, Not
 
 
 class ProblogEngine():
     def __init__(self, problog_rules):
         self.engine = DefaultEngine()
-        self.db = self.engine.prepare(PrologString(problog_rules))
+        self.db = self.engine.prepare(PrologString(problog_rules))  # problog.program.ClauseDB
 
     def query(self, query_term):
         """
@@ -15,15 +16,27 @@ class ProblogEngine():
         :return: Valid solutions for the variable of interest.
         :type return: list(Term)
         """
-        bool_result = not None in query_term.args
         results = self.engine.query(self.db, query_term)
-        if not bool_result:
-            return [result[query_term.args.index(None)] for result in results]
-        else:
-            return len(results) != 0
+        return [result[query_term.args.index(None)] for result in results]
+
+    def query_bool(self, query_term):
+        results = self.engine.query(self.db, query_term)
+        return len(results) != 0
 
     def extend(self, prolog_string):
         for statement in prolog_string:
             self.db += statement
+
+
+
+
+def make_environment(term):
+    if isinstance(term, Var):
+        return {term.functor: None}
+    else:
+        env = dict()
+        for arg in term.args:
+            env.update(make_environment(arg))
+        return env
 
 

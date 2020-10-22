@@ -4,10 +4,12 @@ from game_player import LegalGamePlayer, RandomGamePlayer, HumanGamePlayer
 
 
 if __name__ == "__main__":
-    game_rules = read_rules('../games/connectfour.gdl')
+    gdl_rules = read_rules('../games/kriegtictactoe_v2.gdl')
+    with open('../games/kriegtictactoe_v2.pl', 'w') as f:
+        f.write(parse_rules_to_string(gdl_rules))
 
-    gm = GameManager_GDL()
-    gameID = gm.add_game(game_rules, 600, 30)
+    gm = GameManager_GDLII()
+    gameID = gm.add_game(gdl_rules, 600, 30)
     roles = gm.get_game(gameID).roles
 
     gm.add_player(gameID, roles[0], RandomGamePlayer())

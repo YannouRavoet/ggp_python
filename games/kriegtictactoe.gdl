@@ -30,7 +30,7 @@
     (<= (input black (mark ?m ?n)) (index ?m) (index ?n))
 
     (input random (tiebreak x))
-    (input random (tiebreak 0))
+    (input random (tiebreak o))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; init
@@ -62,7 +62,7 @@
        (not (true (tried black ?m ?n))))
 
    (legal random (tiebreak x))
-   (legal random (tiebreak 0))
+   (legal random (tiebreak o))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; next
@@ -126,7 +126,6 @@
       (does ?r (mark ?m ?n))
       (true (cell ?m ?n b))
       (does ?s (mark ?j ?k))
-      (distinct ?r ?s)
       (or (distinct ?m ?j) (distinct ?n ?k)))
 
 

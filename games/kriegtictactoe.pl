@@ -12,7 +12,7 @@ base(tried(black,_m,_n)) :- index(_m), index(_n).
 input(white,mark(_m,_n)) :- index(_m), index(_n).
 input(black,mark(_m,_n)) :- index(_m), index(_n).
 input(random,tiebreak(x)).
-input(random,tiebreak(0)).
+input(random,tiebreak(o)).
 init(cell(1,1,b)).
 init(cell(1,2,b)).
 init(cell(1,3,b)).
@@ -25,7 +25,7 @@ init(cell(3,3,b)).
 legal(white,mark(_m,_n)) :- index(_m), index(_n), \+tried(white,_m,_n).
 legal(black,mark(_m,_n)) :- index(_m), index(_n), \+tried(black,_m,_n).
 legal(random,tiebreak(x)).
-legal(random,tiebreak(0)).
+legal(random,tiebreak(o)).
 next(tried(_p,_m,_n)) :- does(_p,mark(_m,_n)).
 next(tried(_r,_m,_n)) :- tried(_r,_m,_n).
 next(cell(_m,_n,x)) :- does(white,mark(_m,_n)), cell(_m,_n,b), does(black,mark(_j,_k)), (\+(=(_m,_j)); \+(=(_n,_k))).
@@ -35,7 +35,7 @@ next(cell(_m,_n,x)) :- cell(_m,_n,x).
 next(cell(_m,_n,o)) :- cell(_m,_n,o).
 next(cell(_m,_n,b)) :- cell(_m,_n,b), \+marked(_m,_n).
 marked(_m,_n) :- does(_r,mark(_m,_n)).
-sees(_r,ok) :- does(_r,mark(_m,_n)), cell(_m,_n,b), does(_s,mark(_j,_k)), \+(=(_r,_s)), (\+(=(_m,_j)); \+(=(_n,_k))).
+sees(_r,ok) :- does(_r,mark(_m,_n)), cell(_m,_n,b), does(_s,mark(_j,_k)), (\+(=(_m,_j)); \+(=(_n,_k))).
 sees(white,ok) :- does(white,mark(_m,_n)), cell(_m,_n,b), does(random,tiebreak(x)).
 sees(black,ok) :- does(black,mark(_m,_n)), cell(_m,_n,b), does(random,tiebreak(o)).
 goal(white,100) :- line(x), \+line(o).

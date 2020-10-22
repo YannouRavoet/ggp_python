@@ -1,0 +1,235 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Meier
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; role
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(role random)
+(role p1)
+(role p2)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; init
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(init (rolling_for p1))
+(init (previous_claimed_values 0 0))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; legal
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(<= (legal random (roll ?p ?x ?y))
+	(true (rolling_for ?p))
+	(dots ?x)
+	(dots ?y)
+)
+
+(<= (legal ?p noop)
+	(role ?p)
+	(distinct ?p random)
+	(true (rolling_for ?q))
+)
+
+(<= (legal ?p (claim ?x ?y))
+	(true (claiming ?p))
+	(true (previous_claimed_values ?mx ?my))
+	(better_values ?mx ?my   ?x ?y)
+)
+
+(<= (legal ?q noop)
+	(role ?q)
+	(true (claiming ?p))
+	(distinct ?q ?p)
+)
+
+(<= (legal ?p you_bluff)
+	(true (guessing ?p))
+)
+
+(<= (legal ?p ask_roll)
+	(true (guessing ?p))
+	(not (true (previous_claimed_values 2 1)) )
+)
+
+(<= (legal ?q noop)
+	(role ?q)
+	(true (guessing ?p))
+	(distinct ?q ?p)
+)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; next
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(<= (next (has_dice ?p ?x ?y))
+	(does random (roll ?p ?x1 ?y1))
+	(sort ?x1 ?y1 ?x ?y)
+)
+
+(<= (next (claiming ?p))
+	(true (rolling_for ?p))
+)
+
+(<= (next (guessing ?q))
+	(does ?p (claim ?x ?y))
+	(next_player ?p ?q)
+)
+
+(<= (next (previous_claimed_values ?x ?y))
+	(does ?p (claim ?x ?y))
+)
+
+(<= (next (rolling_for ?p))
+	(does ?p ask_roll)
+)
+
+(<= (next (game_over ?p) )
+	(does ?p you_bluff)
+)
+
+(<= (next (previous_claimed_values ?x ?y))
+	(true (previous_claimed_values ?x ?y))
+	(not claims_any)
+)
+
+(<= (next (has_dice ?p ?x ?y))
+	(true (has_dice ?p ?x ?y)) ; stays true until some other dice are rolled
+	(not any_roll)
+)
+
+(<= (sort ?x ?y ?x ?y)
+	(leq ?y ?x)
+)
+
+(<= (sort ?y ?x ?x ?y)
+	(leq ?y ?x)
+)
+
+
+(<= claims_any
+	(does ?p (claim ?x ?y))
+)
+
+(<= any_roll
+	(role ?p)
+	(dots ?x)
+	(dots ?y)
+	(does random (roll ?p ?x ?y))
+)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; sees
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(<= (sees ?p (my_dice ?x ?y))
+	(does random (roll ?p ?x ?y))
+)
+
+(<= (sees ?q (does ?p ?m))
+	(role ?q)
+	(does ?p ?m)
+	(distinct ?p random)
+	; (distinct ?q ?p)
+	; (distinct ?q random)
+)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; terminal
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(<= terminal
+	(true (game_over ?p))
+)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; goal
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(<= (goal ?q 100)
+	(true (game_over ?q))
+	(next_player ?p ?q)
+	(true (has_dice ?p ?x ?y))
+	(not (true (previous_claimed_values ?x ?y)) )
+)
+
+(<= (goal ?p 100)
+	(true (game_over ?q))
+	(next_player ?p ?q)
+	(true (has_dice ?p ?x ?y))
+	(true (previous_claimed_values ?x ?y))
+)
+
+(<= (goal ?q 0)
+	(true (game_over ?q))
+	(next_player ?p ?q)
+	(true (has_dice ?p ?x ?y))
+	(true (previous_claimed_values ?x ?y))
+)
+
+(<= (goal ?p 0)
+	(true (game_over ?q))
+	(next_player ?p ?q)
+	(true (has_dice ?p ?x ?y))
+	(not (true (previous_claimed_values ?x ?y)) )
+)
+
+(goal random 100)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; support
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(dots 1)
+(dots 2)
+(dots 3)
+(dots 4)
+(dots 5)
+(dots 6)
+
+(<= (leq ?x ?x)
+	(dots ?x)
+)
+
+(<= (leq ?x ?y)
+	(succ ?x ?i)
+	(leq ?i ?y)
+)
+
+(succ_values 0 0   3 1)
+
+(succ_values 3 1   3 2)
+(succ_values 3 2   4 1)
+
+(succ_values 4 1   4 2)
+(succ_values 4 2   4 3)
+(succ_values 4 3   5 1)
+
+(succ_values 5 1   5 2)
+(succ_values 5 2   5 3)
+(succ_values 5 3   5 4)
+(succ_values 5 4   6 1)
+
+(succ_values 6 1   6 2)
+(succ_values 6 2   6 3)
+(succ_values 6 3   6 4)
+(succ_values 6 4   6 5)
+(succ_values 6 5   1 1)
+
+(succ_values 1 1   2 2)
+(succ_values 2 2   3 3)
+(succ_values 3 3   4 4)
+(succ_values 4 4   5 5)
+(succ_values 5 5   6 6)
+(succ_values 6 6   2 1)
+
+(<= (better_values ?mx ?my  ?x ?y)
+	(succ_values ?mx ?my  ?x ?y)
+)
+
+(<= (better_values ?mx ?my  ?x ?y)
+	(succ_values ?mx ?my  ?ix ?iy)
+	(better_values ?ix ?iy  ?x ?y)
+)
+
+(next_player p1 p2)
+(next_player p2 p1)

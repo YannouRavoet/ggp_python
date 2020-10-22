@@ -1,6 +1,7 @@
 from utils.ggp_utils import Game, make_move_term
 import random
 
+
 class GamePlayer(object):
     def __init__(self):
         self.role = None
@@ -8,14 +9,17 @@ class GamePlayer(object):
         self.startclock = -1
         self.playclock = -1
 
+        self.action = None
+
     def apply_moves_percepts(self, msg):
         moves = list(filter(lambda m: m is not None, msg['moves']))
         if len(moves) == len(self.game.roles):  # GDL
             self.game.extend_state_with_facts([make_move_term(role, move) for role, move in zip(self.game.roles, moves)])
             self.game.calc_next_state()
         elif len(moves) == 1:   # GDL-II
-            self.game.extend_state_with_facts([make_move_term(self.role, moves[0])])
-            self.game.extend_state_with_facts(msg['percepts'])
+            ownaction = make_move_term(self.role, moves[0])
+            valid_action_permuations = self.game.get_otherrole_actioncombinations(self.role, ownaction, msg['percepts']) # get all valid action combinations for all roles
+            self.game.extend_state_with_facts(valid_action_permuations[0]) # chose a set of combinations to extend the state
             self.game.calc_next_state()
         elif len(moves) > 0:
             NotImplementedError('A joint move set with less moves than roles is not supported.')

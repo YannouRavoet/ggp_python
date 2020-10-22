@@ -149,7 +149,7 @@ class GameManager_GDL(object):
             if match_entry.all_players_are(PlayerStatus.PassedAction):
                 # Replace illegal moves with legal moves
                 for pe in match_entry.players:
-                    if not match_entry.game.state.engine.query(Term('legal',*[pe.role, pe.move])):
+                    if not match_entry.game.state.engine.query_bool(Term('legal',*[pe.role, pe.move])):
                         pe.move = random.choice(match_entry.game.state.get_legal_actions(pe.role))
                 self.handle_moves(matchID)
 
