@@ -22,12 +22,11 @@ from problog.logic import (
 
 class GDLParser():
     def __init__(self):
-        super().__init__()
         self.lpar = Literal('(')('lpar')
         self.rpar = Literal(')')('rpar')
         self.qmark = Literal('?')('qmark')
 
-        self.word_chars = ''.join(c for c in printables if c not in ('()'))
+        self.word_chars = ''.join(c for c in printables if c not in '()')
         self.word = Word(self.word_chars) | quotedString
         self.variable = (Suppress(self.qmark) + ~White() + self.word)('variable')
 

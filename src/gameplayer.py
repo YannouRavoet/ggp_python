@@ -1,56 +1,41 @@
-import sys
 import socket
 import logging
 import argparse
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import HTTPServer
 from http.client import HTTPConnection
+from utils.messsaging import Message, MessageType, MessageHandler
 
-from utils.messsaging import Message, MessageType
 
 class GamePlayer(HTTPServer):
-    class RequestHandler(BaseHTTPRequestHandler):
-        def do_POST(self):
-            try:
-                print(self.server)
-                sys.stdout.write('received POST')
-            except Exception as e:
-                sys.stderr.write('Error: ' + str(e) + '\n')
-                return
-
-        def do_GET(self):
-            try:
-                print(self.server)
-                sys.stdout.write('received GET')
-            except Exception as e:
-                sys.stderr.write('Error: ' + str(e) + '\n')
-                return
-
     def __init__(self, name, port):
-        HTTPServer.__init__(self, ('', port), self.RequestHandler)
+        HTTPServer.__init__(self, ('', port), MessageHandler)
         self.name = name
 
-    def connect_to_gamemanager(self, host, port):
-        conn = HTTPConnection(host, port)
-        msg = Message(MessageType.ADD_PLAYER)
-        try:
-            conn.request('POST', '', str(msg))
-        except socket.timeout:
-            logging.error('Timeout...')
-        return
+    def handle_message(self, msg):
+        if msg.type == MessageType.START:
+            pass
+        elif msg.type == MessageType.PLAY:
+            pass
+        elif msg.type == MessageType.STOP:
+            pass
+        elif msg.type == MessageType.ABORT:
+            pass
+        else:
+            raise NotImplementedError
 
-
-DEFAULT_NAME = 'Unnamed Game Player'
-DEFAULT_PORT = 5601
 
 if __name__ == "__main__":
     """""""""""""""
     PARSE ARGUMENTS
     """""""""""""""
+    DEFAULT_NAME = 'Unnamed Game Player'
+    DEFAULT_PORT = 5601
+
     parser = argparse.ArgumentParser()
-    parser.add_argument('-n', '--name', action="store", help='name of the game player', dest='name', type=str, default=DEFAULT_NAME)
-    parser.add_argument('-p', '--port', action="store", help='port to listen to', dest='port', type=int, default=DEFAULT_PORT)
-    parser.add_argument('-gmh', '--game manager host', action="store", help='host of the game manager to connect to', dest='gmhost', type=str, default='localhost')
-    parser.add_argument('-gmp', '--game manager port', action="store", help='port of the game manager to connect to', dest='gmport', type=int, default=5600)
+    parser.add_argument('-n', '--name', dest='name', type=str, default=DEFAULT_NAME,
+                        help='name of the game player')
+    parser.add_argument('-p', '--port', dest='port', type=int, default=DEFAULT_PORT,
+                        help='port to listen to')
     args = parser.parse_args()
 
     """""""""""""""
