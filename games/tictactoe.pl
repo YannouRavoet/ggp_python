@@ -30,14 +30,6 @@ next(cell(_m,_n,b)) :- does(_w,mark(_j,_k)), cell(_m,_n,b), \+(=(_m,_j)).
 next(cell(_m,_n,b)) :- does(_w,mark(_j,_k)), cell(_m,_n,b), \+(=(_n,_k)).
 next(control(white)) :- control(black).
 next(control(black)) :- control(white).
-row(_m,_x) :- cell(_m,1,_x), cell(_m,2,_x), cell(_m,3,_x).
-column(_n,_x) :- cell(1,_n,_x), cell(2,_n,_x), cell(3,_n,_x).
-diagonal(_x) :- cell(1,1,_x), cell(2,2,_x), cell(3,3,_x).
-diagonal(_x) :- cell(1,3,_x), cell(2,2,_x), cell(3,1,_x).
-line(_x) :- row(_m,_x).
-line(_x) :- column(_m,_x).
-line(_x) :- diagonal(_x).
-open :- cell(_m,_n,b).
 goal(white,100) :- line(x), \+line(o).
 goal(white,50) :- \+line(x), \+line(o).
 goal(white,0) :- \+line(x), line(o).
@@ -47,3 +39,11 @@ goal(black,0) :- line(x), \+line(o).
 terminal :- line(x).
 terminal :- line(o).
 terminal :- \+open.
+row(_m,_x) :- cell(_m,1,_x), cell(_m,2,_x), cell(_m,3,_x).
+column(_n,_x) :- cell(1,_n,_x), cell(2,_n,_x), cell(3,_n,_x).
+diagonal(_x) :- cell(1,1,_x), cell(2,2,_x), cell(3,3,_x).
+diagonal(_x) :- cell(1,3,_x), cell(2,2,_x), cell(3,1,_x).
+line(_x) :- row(_m,_x).
+line(_x) :- column(_m,_x).
+line(_x) :- diagonal(_x).
+open :- cell(_m,_n,b).

@@ -87,7 +87,7 @@ class GDLtoProbLogParser(GDLParser):
             elif name == 'not':
                 return Not('\+', args[0])
             elif name == 'distinct':
-                return Term('\+', Term('=', *args))
+                return Not('\+', Term('=', *args))
             elif name == 'true':
                 return args[0]
             return Term(name, *args)
@@ -99,9 +99,9 @@ class GDLtoProbLogParser(GDLParser):
 
 def read_rules(gdl_file):
     """
-    Reads the rules of a GDL/KIF file into a string
-    :param gdl_file: file location pf game rules in KIF format (Knowledge Interchange Format)
-    :return: string of game rules in GDL format
+    Reads rules, ignores comments.
+    :param gdl_file: file location of game rules in KIF format (Knowledge Interchange Format)
+    :return: string of game rules in KIF format
     """
     with open(gdl_file) as f:
         gdl_rules = '\n'.join(line for line in (line.strip() for line in f.readlines())
@@ -109,18 +109,17 @@ def read_rules(gdl_file):
     return gdl_rules
 
 
-def parse_rules_to_string(gdl_rules):
+def write_rules(output_file, problogterms):
+    problogstring = 'test'
+    with open(output_file, 'w') as f:
+        f.write(problogstring)
+
+
+
+def parse_gdlrules_to_problogterms(gdl_rules):
     """
-    Parses a given string of gdl_rules into a string of equivalent problog_rules.
-    :param gdl_rules: string of game rules in KIF format (Knowledge Interchange Format)
-    :return: string of game rules in ProbLog format
+    Parses into a ProbLog term representing a Prolog list
+    :param gdl_rules: a string of gdl_rules in KIF format (Knowledge Interchange Format)
+    :return: ProbLog term representing a Prolog list
     """
-    return term_list_to_string(parse_rules_term_list(gdl_rules))
-
-
-def term_list_to_string(term_list):
-    return '\n'.join([str(term) + '.' for term in term_list])
-
-
-def parse_rules_term_list(gdl_rules):
     return list(GDLtoProbLogParser().statements.parseString(gdl_rules, parseAll=True))
