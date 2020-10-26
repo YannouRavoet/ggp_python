@@ -99,21 +99,14 @@ class GDLtoProbLogParser(GDLParser):
 
 def read_rules(gdl_file):
     """
-    Reads rules, ignores comments.
-    :param gdl_file: file location of game rules in KIF format (Knowledge Interchange Format)
+    Reads game rules, ignores comments.
+    :param gdl_file: path to input file
     :return: string of game rules in KIF format
     """
     with open(gdl_file) as f:
         gdl_rules = '\n'.join(line for line in (line.strip() for line in f.readlines())
                               if line and not line.startswith(';'))
     return gdl_rules
-
-
-def write_rules(output_file, problogterms):
-    problogstring = 'test'
-    with open(output_file, 'w') as f:
-        f.write(problogstring)
-
 
 
 def parse_gdlrules_to_problogterms(gdl_rules):
@@ -123,3 +116,15 @@ def parse_gdlrules_to_problogterms(gdl_rules):
     :return: ProbLog term representing a Prolog list
     """
     return list(GDLtoProbLogParser().statements.parseString(gdl_rules, parseAll=True))
+
+
+def write_rules(output_file, problogterms):
+    """
+    Writes a list of problog terms onto a designated output file.
+    :param output_file: path to output file
+    :param problogterms: list of Problog Term
+    :return: None
+    """
+    problogstring = '\n'.join([str(term) + '.' for term in problogterms])
+    with open(output_file, 'w') as f:
+        f.write(problogstring)

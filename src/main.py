@@ -1,12 +1,10 @@
-from utils.gdl_parsing import read_rules, parse_gdlrules_to_problogterms
+from utils.gdl_parsing import read_rules, parse_gdlrules_to_problogterms, write_rules
 
 
 if __name__ == "__main__":
     gdl_rules = read_rules('../games/tictactoe.gdl')
     problog_rules = parse_gdlrules_to_problogterms(gdl_rules)
-    problog_str = str(problog_rules)
-    with open('../games/tictactoe.pl','w') as f:
-        f.write(problog_str)
+    write_rules('../games/tictactoe.pl', problog_rules)
     print('end')
 
 
