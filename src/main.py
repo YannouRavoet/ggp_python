@@ -1,4 +1,4 @@
-from utils.gdl_parsing import read_rules, parse_gdlrules_to_problogterms, write_rules
+from utils.gdl_parser import read_rules, parse_gdlrules_to_problogterms, write_rules
 
 
 if __name__ == "__main__":
