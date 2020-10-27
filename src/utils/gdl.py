@@ -86,7 +86,7 @@ class GDLtoProbLogParser(GDLParser):
             elif name == 'not':
                 return Not('\+', args[0])
             elif name == 'distinct':
-                return Not('\+', Term('=', *args))
+                return Term('\+', Term('=', *args))
             elif name == 'true':
                 return args[0]
             return Term(name, *args)
@@ -108,7 +108,18 @@ def read_rules(gdl_file):
     return gdl_rules
 
 
-def parse_gdlrules_to_problogterms(gdl_rules):
+def write_rules(output_file, problogterms):
+    """
+    Writes a list of problog terms onto a designated output file.
+    :param output_file: path to output file
+    :param problogterms: list of Problog Term
+    :return: None
+    """
+    with open(output_file, 'w') as f:
+        f.write(problogterms2problogstring(problogterms))
+
+
+def gdlstring2problogterms(gdl_rules):
     """
     Parses into a ProbLog term representing a Prolog list
     :param gdl_rules: a string of gdl_rules in KIF format (Knowledge Interchange Format)
@@ -117,13 +128,5 @@ def parse_gdlrules_to_problogterms(gdl_rules):
     return list(GDLtoProbLogParser().statements.parseString(gdl_rules, parseAll=True))
 
 
-def write_rules(output_file, problogterms):
-    """
-    Writes a list of problog terms onto a designated output file.
-    :param output_file: path to output file
-    :param problogterms: list of Problog Term
-    :return: None
-    """
-    problogstring = '\n'.join([str(term) + '.' for term in problogterms])
-    with open(output_file, 'w') as f:
-        f.write(problogstring)
+def problogterms2problogstring(problogterms):
+    return '\n'.join([str(term) + '.' for term in problogterms])
