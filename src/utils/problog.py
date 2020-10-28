@@ -8,7 +8,8 @@ class ProblogEngine():
     def __init__(self, gdl_rules):
         self.engine = DefaultEngine()
         self.problog_terms = gdlstring2problogterms(gdl_rules)
-        self.base_db = self._create_db(None)
+        problog_string = problogterms2problogstring(self.problog_terms)
+        self.base_db = self.engine.prepare(PrologString(problog_string))
 
     def query(self, query, state=None, return_bool=False):
         if state is not None:
@@ -19,9 +20,8 @@ class ProblogEngine():
         return self._return_results(query, results, return_bool)
 
     def _create_db(self, state):
-        state_terms = self.problog_terms
-        if state is not None:
-            state_terms.extend(state.facts)
+        state_terms = deepcopy(self.problog_terms)
+        state_terms.extend(state.facts)
         problog_string = problogterms2problogstring(state_terms)
         return self.engine.prepare(PrologString(problog_string))
 

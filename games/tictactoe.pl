@@ -25,9 +25,9 @@ legal(white,noop) :- control(black).
 legal(black,noop) :- control(white).
 next(cell(_m,_n,x)) :- does(white,mark(_m,_n)), cell(_m,_n,b).
 next(cell(_m,_n,o)) :- does(black,mark(_m,_n)), cell(_m,_n,b).
-next(cell(_m,_n,_w)) :- cell(_m,_n,_w), \+=(_w,b).
-next(cell(_m,_n,b)) :- does(_w,mark(_j,_k)), cell(_m,_n,b), \+=(_m,_j).
-next(cell(_m,_n,b)) :- does(_w,mark(_j,_k)), cell(_m,_n,b), \+=(_n,_k).
+next(cell(_m,_n,_w)) :- cell(_m,_n,_w), \+(=(_w,b)).
+next(cell(_m,_n,b)) :- does(_w,mark(_j,_k)), cell(_m,_n,b), \+(=(_m,_j)).
+next(cell(_m,_n,b)) :- does(_w,mark(_j,_k)), cell(_m,_n,b), \+(=(_n,_k)).
 next(control(white)) :- control(black).
 next(control(black)) :- control(white).
 goal(white,100) :- line(x), \+line(o).

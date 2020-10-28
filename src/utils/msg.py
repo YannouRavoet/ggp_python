@@ -2,6 +2,7 @@ import re
 import logging
 import traceback
 from enum import Enum
+from problog.logic import Term, term2list
 from http.server import BaseHTTPRequestHandler
 
 
@@ -12,8 +13,8 @@ class MessageType(Enum):
     START = 0
     PLAY = 1
     STOP = 2
-    II_PLAY = 3
-    II_STOP = 4
+    PLAY_II = 3
+    STOP_II = 4
     """""""""""""""""""""
     GAME PLAYER MESSAGES
     """""""""""""""""""""
@@ -33,9 +34,9 @@ class Message:
     def __str__(self):
         if self.type == MessageType.START:
             return f"start({', '.join([str(arg) for arg in self.args])})"
-        elif self.type == MessageType.PLAY or self.type == MessageType.II_PLAY:
+        elif self.type == MessageType.PLAY or self.type == MessageType.PLAY_II:
             return f"play({', '.join([str(arg) for arg in self.args])})"
-        elif self.type == MessageType.STOP or self.type == MessageType.II_STOP:
+        elif self.type == MessageType.STOP or self.type == MessageType.STOP_II:
             return f"stop({', '.join([str(arg) for arg in self.args])})"
         elif self.type == MessageType.READY:
             return "ready"
@@ -46,7 +47,6 @@ class Message:
 
     @staticmethod
     def parse(message):
-        # TODO: discern between GDL and GDL-II messages for play and stop (if m is None)
         """
         Converts a string message into a python Message object
         :param message: string of the message to parse
@@ -54,22 +54,40 @@ class Message:
         """
         if message == "ready":
             return Message(MessageType.READY)
+
         elif message == "done":
             return Message(MessageType.DONE)
+
         elif message.startswith("start"):
             m = re.match(r"start\((\w*), (\w*), ([\w\s|\\,?()\[\]{}<=+]*), ([0-9]*), ([0-9]*)\)", message)
             return Message(MessageType.START,
-                           args=[m.group(1), m.group(2), m.group(3), int(m.group(4)), int(m.group(5))])
+                           args=[m.group(1),
+                                 Term(m.group(2)),
+                                 m.group(3),
+                                 int(m.group(4)),
+                                 int(m.group(5))])
+
         elif message.startswith("play"):
-            m = re.match(r"play\((\w*), ([\w\s|\\,?()\[\]{}<=+]*)\)", message)
+            m = re.match(r"play\((\w*), (\[[\w\s|\\,?()\[\]{}<=+]*])\)", message)
+            if m is None:
+                # TODO: handle PLAY_II messages
+                return Message(MessageType.PLAY_II)
             return Message(MessageType.PLAY,
-                           args=[m.group(1), m.group(2)])
+                           args=[m.group(1),
+                                 term2list(Term.from_string(m.group(2)))])
+
         elif message.startswith("stop"):
             m = re.match(r"stop\((\w*), ([\w\s|\\,?()\[\]{}<=+]*)\)", message)
+            if m is None:
+                # TODO: handle STOP_II messages
+                return Message(MessageType.STOP_II)
             return Message(MessageType.STOP,
-                           args=[m.group(1), m.group(2)])
+                           args=[m.group(1),
+                                 term2list(Term.from_string(m.group(2)))])
+
         else:
-            return Message(MessageType.ACTION, [message])
+            return Message(MessageType.ACTION,
+                           args=[Term.from_string(message)])
 
 
 class MessageHandler(BaseHTTPRequestHandler):
@@ -77,7 +95,7 @@ class MessageHandler(BaseHTTPRequestHandler):
         try:
             length = int(self.headers['content-length'])
             msg = self.rfile.read(length).decode('unicode_escape')
-            print(f"received {msg}")
+            print(f"<= {msg}")
             msg = Message.parse(msg)
             response = self.server.handle_message(msg)
             if response is not None:
@@ -94,6 +112,9 @@ class MessageHandler(BaseHTTPRequestHandler):
             self.send_header('Content-length', str(len(text)))
             self.end_headers()
             self.wfile.write(text.encode('utf-8'))
-            print(f"sent {text}")
+            print(f"=> {text}")
+
+    def log_message(self, format, *args):
+        pass
 
 

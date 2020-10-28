@@ -20,7 +20,7 @@ from problog.logic import (
 )
 
 
-class GDLParser():
+class GDLParser:
     def __init__(self):
         self.lpar = Literal('(')('lpar')
         self.rpar = Literal(')')('rpar')

@@ -1,5 +1,4 @@
 from problog.logic import Term, Constant
-
 from utils.problog import ProblogEngine
 
 
@@ -9,6 +8,10 @@ class MatchEntry(object):
         self.gdlrules = gdlrules
         self.startclock = startclock
         self.playclock = playclock
+        self.results = list()
+
+    def add_result(self, name, role, goal):
+        self.results.append((name, role, goal))
 
 
 class Simulator(object):
@@ -19,64 +22,48 @@ class Simulator(object):
         self.gdl_rules = gdl_rules
         self.engine = ProblogEngine(gdl_rules)
 
+    # GDL
     def player_roles(self):
         all_roles = self.engine.query(query=Term('role', None))
         return list(filter(lambda t: t != Term('random'), all_roles))
-
-    def has_random(self):
-        pass
 
     def initial_state(self):
         facts = self.engine.query(query=Term('init', None))
         return State(facts)
 
     def legal_actions(self, state, role):
-        pass
+        return self.engine.query(Term('legal', *[role, None]), state=state)
 
     def terminal(self, state):
         return self.engine.query(query=Term('terminal'), state=state, return_bool=True)
 
     def goal(self, state, role):
-        pass
+        return self.engine.query(Term('goal', *[role, None]), state=state)
 
-    def next_state(self, state, moves):
-        pass
+    def next_state(self, state, actions):
+        if isinstance(actions, list):
+            actions = dict(zip(self.player_roles(), actions))
+        for role, action in actions.items():
+            state.add_action(role, action)
+        new_facts = self.engine.query(Term('next',  None), state=state)
+        return State(new_facts)
 
-    def percepts(self, state, role):
+    # GDL-II
+    def has_random(self):
+        return self.engine.query(query=Term('role', Constant('random')), return_bool=True)
+
+    def percepts(self, state, role, actions):
         pass
 
 
 class State(object):
     def __init__(self, facts):
         self.facts = facts
-        self.moves = dict()
+        self.actions = dict()
 
-    def add_move(self, role,  move):
-        self.facts.append(Term('does', *[role, move]))
-        self.moves[role] = move
+    def add_action(self, role, action):
+        self.facts.append(Term('does', *[role, action]))
+        self.actions[role] = action
 
     def __repr__(self):
         return ', '.join([str(fact) for fact in self.facts])
-
-
-class Role(Term):
-    def __init__(self, role):
-        super().__init__('role', [Constant(role)])
-        self.role = self.args[0]
-
-    def __repr__(self):
-        super().__repr__()
-
-
-class Action(Term):
-    def __init__(self, role, action):
-        super().__init__(functor='does', *[role.role, action])
-        self.role = self.args[0]
-        self.action = self.args[1]
-
-
-class Percept(Term):
-    def __init__(self, role, percept):
-        super().__init__(functor='sees', *[role.role, percept])
-        self.role = self.args[0]
-        self.percept = self.args[1]

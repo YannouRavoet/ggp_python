@@ -1,18 +1,18 @@
-import logging
 import os
-import argparse
 import random
 import socket
 import string
-from http.client import HTTPConnection
-from http.server import HTTPServer
+import logging
+import argparse
 from threading import Thread
-
+from http.server import HTTPServer
+from http.client import HTTPConnection
 from utils.msg import MessageType, MessageHandler, Message
 from utils.gdl import read_rules
 from utils.ggp import Simulator, MatchEntry
 
 
+# TODO: Create child class for GDL-II that overwrites send_play and send_stop
 class GameManager(HTTPServer):
     def __init__(self, port):
         HTTPServer.__init__(self, ('', port), MessageHandler)
@@ -24,7 +24,8 @@ class GameManager(HTTPServer):
         try:
             conn.request('POST', '', str(msg))
             try:
-                return conn.getresponse().read()
+                response = conn.getresponse().read().decode('unicode_escape')
+                return Message.parse(response)
             except socket.timeout:
                 logging.error('Socket timeout...')
         finally:
@@ -32,14 +33,12 @@ class GameManager(HTTPServer):
         return None
 
     def handle_message(self, msg):
-        if msg.type == MessageType.READY:
-            pass
-        elif msg.type == MessageType.ACTION:
-            pass
-        elif msg.type == MessageType.DONE:
-            pass
-        else:
-            raise NotImplementedError
+        """
+        Can be used to handle player connections (adding, removing)
+        :param msg: msg.Message of type msg.MessageType to process
+        :return: response message to sender
+        """
+        raise NotImplementedError
 
     def thread_roles(self, target):
         threads = dict()
@@ -55,26 +54,30 @@ class GameManager(HTTPServer):
         simulator = Simulator(gdl_rules)
         roles = simulator.player_roles()
         assert (len(roles) == len(players))
-        lastmoves = [None] * len(roles)
-        players = dict(zip(roles, zip(players, lastmoves)))
+        actions = [None] * len(roles)
+        players = dict(zip(roles, list(map(list, zip(players, actions)))))
         self.match = {'MatchEntry': MatchEntry(matchID, gdl_rules, startclock, playclock),
                       'Simulator': simulator,
                       'Players': players,
                       'State': None}
 
     def run_match(self):
+        # START MATCH
         socket.setdefaulttimeout(self.match['MatchEntry'].startclock)
         self.thread_roles(self.send_start)
         self.match['State'] = self.match['Simulator'].initial_state()
         socket.setdefaulttimeout(self.match['MatchEntry'].playclock)
-        i = 0
-        while i<5:#not self.match['Simulator'].terminal(self.match['State']):
-            self.thread_roles(self.send_play)  # pass along previous moves and await new moves
-            # TODO: get legal moves
-            # TODO: compare moves in self.match['State'] to legal moves
-            # TODO: update state
-            i += 1
-        # TODO: save results
+        # PLAY MATCH
+        while not self.match['Simulator'].terminal(self.match['State']):
+            self.thread_roles(self.send_play)
+            joint_actions = list()
+            for role, ((name, _, _), action) in self.match['Players'].items():
+                legal_actions = self.match['Simulator'].legal_actions(self.match['State'], role)
+                if action not in legal_actions:
+                    action = random.choice(legal_actions)
+                joint_actions.append(action)
+            self.match['State'] = self.match['Simulator'].next_state(self.match['State'], joint_actions)
+        # STOP MATCH
         self.thread_roles(self.send_stop)
 
     def send_start(self, role):
@@ -87,19 +90,19 @@ class GameManager(HTTPServer):
         self.send_message(role, msg)
 
     def send_play(self, role):
-        jointmoves = [move for _, (_, move) in self.match['Players'].items()]
+        jointactions = [action for _, (_, action) in self.match['Players'].items()]
         msg = Message(MessageType.PLAY,
                       args=[self.match['MatchEntry'].matchID,
-                            jointmoves])
-        self.send_message(role, msg)
+                            jointactions])
+        response_msg = self.send_message(role, msg)
+        self.match['Players'][role][1] = response_msg.args[0]
 
     def send_stop(self, role):
-        jointmoves = [move for _, (_, move) in self.match['Players'].items()]
+        jointactions = [action for _, (_, action) in self.match['Players'].items()]
         msg = Message(MessageType.STOP,
                       args=[self.match['MatchEntry'].matchID,
-                            jointmoves])
+                            jointactions])
         self.send_message(role, msg)
-
 
 
 if __name__ == "__main__":
@@ -111,14 +114,12 @@ if __name__ == "__main__":
     DEFAULT_STARTCLOCK = 30
     DEFAULT_PLAYCLOCK = 10
 
-
     def player(s):
         try:
             name, host, port = s[1:-1].split(',')
             return str(name), str(host), int(port)
         except Exception:
             raise argparse.ArgumentTypeError('Player list must be of form (name, host, port)')
-
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-p', '--port', dest='port', type=int, default=DEFAULT_PORT,
