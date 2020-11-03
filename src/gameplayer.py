@@ -39,7 +39,8 @@ class GamePlayer(HTTPServer):
     def handle_stop(self, matchID, jointactions):
         self.match['State'] = self.match['Simulator'].next_state(self.match['State'], jointactions)
         goal_value = self.match['Simulator'].goal(self.match['State'], self.match['Role'])
-        self.match['MatchEntry'].add_result(self.name, self.match['Role'], goal_value)
+        self.match['MatchEntry'].add_result(self.match['Role'], goal_value)
+        print(f"resulting goal value: {goal_value}")
         return Message(MessageType.DONE)
 
     def calculate_action(self):
@@ -63,9 +64,9 @@ if __name__ == "__main__":
     """""""""""""""
     RUN GAMEPLAYER
     """""""""""""""
-    from gameplayers import LegalPlayer
+    from gameplayers import LegalPlayer, RandomPlayer
 
-    player = LegalPlayer(args.name, args.port)
+    player = RandomPlayer(args.name, args.port)
     try:
         player.serve_forever()
     except KeyboardInterrupt:

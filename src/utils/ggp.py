@@ -8,10 +8,10 @@ class MatchEntry(object):
         self.gdlrules = gdlrules
         self.startclock = startclock
         self.playclock = playclock
-        self.results = list()
+        self.results = dict()
 
-    def add_result(self, name, role, goal):
-        self.results.append((name, role, goal))
+    def add_result(self, role, goal):
+        self.results[role] = goal
 
 
 class Simulator(object):
@@ -38,7 +38,7 @@ class Simulator(object):
         return self.engine.query(query=Term('terminal'), state=state, return_bool=True)
 
     def goal(self, state, role):
-        return self.engine.query(Term('goal', *[role, None]), state=state)
+        return self.engine.query(Term('goal', *[role, None]), state=state)[0]
 
     def next_state(self, state, actions):
         if isinstance(actions, list):

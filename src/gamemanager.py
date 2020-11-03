@@ -79,6 +79,8 @@ class GameManager(HTTPServer):
             self.match['State'] = self.match['Simulator'].next_state(self.match['State'], joint_actions)
         # STOP MATCH
         self.thread_roles(self.send_stop)
+        print(f"Match successfully ended...")
+        [print(f"{role}: {goal}") for role, goal in self.match['MatchEntry'].results.items()]
 
     def send_start(self, role):
         msg = Message(MessageType.START,
@@ -103,6 +105,8 @@ class GameManager(HTTPServer):
                       args=[self.match['MatchEntry'].matchID,
                             jointactions])
         self.send_message(role, msg)
+        goal_value = self.match['Simulator'].goal(self.match['State'], role)
+        self.match['MatchEntry'].add_result(role, goal_value)
 
 
 if __name__ == "__main__":
