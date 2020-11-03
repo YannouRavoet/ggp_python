@@ -1,5 +1,6 @@
 import re
 import logging
+import time
 import traceback
 from enum import Enum
 from problog.logic import Term, term2list
@@ -93,11 +94,12 @@ class Message:
 class MessageHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         try:
+            rcv_time = time.time()
             length = int(self.headers['content-length'])
             msg = self.rfile.read(length).decode('unicode_escape')
             print(f"<= {msg}")
             msg = Message.parse(msg)
-            response = self.server.handle_message(msg)
+            response = self.server.handle_message(msg, rcv_time)
             if response is not None:
                 self.respond(str(response))
 
@@ -115,6 +117,9 @@ class MessageHandler(BaseHTTPRequestHandler):
             print(f"=> {text}")
 
     def log_message(self, format, *args):
+        """
+        Overrides default log printing to keep from crowding the output console.
+        """
         pass
 
 

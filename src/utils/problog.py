@@ -20,10 +20,10 @@ class ProblogEngine():
         return self._return_results(query, results, return_bool)
 
     def _create_db(self, state):
-        state_db = self.base_db.extend()
-        for statement in PrologString(problogterms2problogstring(state.facts)):
-            state_db += statement
-        return state_db
+        state_terms = deepcopy(self.problog_terms)
+        state_terms.extend(state.facts)
+        problog_string = problogterms2problogstring(state_terms)
+        return self.engine.prepare(PrologString(problog_string))
 
     @staticmethod
     def _return_results(query, results, return_bool):
@@ -31,3 +31,6 @@ class ProblogEngine():
             return len(results) != 0
         else:
             return [result[query.args.index(None)] for result in results]
+
+    def clear_stack(self):
+        self.engine.shrink_stack()

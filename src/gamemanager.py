@@ -9,7 +9,8 @@ from http.server import HTTPServer
 from http.client import HTTPConnection
 from utils.msg import MessageType, MessageHandler, Message
 from utils.gdl import read_rules
-from utils.ggp import Simulator, MatchEntry
+from utils.ggp import Simulator, MatchEntry, JointAction
+from utils.pretty_print import PrettyPrinter
 
 
 # TODO: Create child class for GDL-II that overwrites send_play and send_stop
@@ -18,9 +19,12 @@ class GameManager(HTTPServer):
         HTTPServer.__init__(self, ('', port), MessageHandler)
         self.match = None
 
+    """""""""""
+     MESSAGING
+    """""""""""
     def send_message(self, role, msg):
-        (_, host, port), _ = self.match['Players'][role]
-        conn = HTTPConnection(host, port)
+        player, _ = self.match['Players'][role]
+        conn = HTTPConnection(player.host, player.port)
         try:
             conn.request('POST', '', str(msg))
             try:
@@ -32,14 +36,38 @@ class GameManager(HTTPServer):
             conn.close()
         return None
 
-    def handle_message(self, msg):
+    def handle_message(self, msg, rcvtime):
         """
-        Can be used to handle player connections (adding, removing)
-        :param msg: msg.Message of type msg.MessageType to process
-        :return: response message to sender
+        Can be used to handle player connections.
         """
         raise NotImplementedError
 
+    def send_start(self, role):
+        msg = Message(MessageType.START,
+                      args=[self.match['MatchEntry'].matchID,
+                            role,
+                            self.match['MatchEntry'].gdlrules,
+                            self.match['MatchEntry'].startclock,
+                            self.match['MatchEntry'].playclock])
+        self.send_message(role, msg)
+
+    def send_play(self, role):
+        msg = Message(MessageType.PLAY,
+                      args=[self.match['MatchEntry'].matchID,
+                            self.match['JointAction'].get_actions()])
+        response_msg = self.send_message(role, msg)
+        self.match['Players'][role][1] = response_msg.args[0]   # save the player action choice
+
+    def send_stop(self, role):
+        msg = Message(MessageType.STOP,
+                      args=[self.match['MatchEntry'].matchID,
+                            self.match['JointAction'].get_actions()])
+        self.send_message(role, msg)
+
+    """""""""""""""
+      MATCHMAKING
+    """""""""""""""
+    # WARNING: USE OF THE SIMULATOR IS NOT THREAD-SAFE!!!
     def thread_roles(self, target):
         threads = dict()
         for role in self.match['Players']:
@@ -54,59 +82,45 @@ class GameManager(HTTPServer):
         simulator = Simulator(gdl_rules)
         roles = simulator.player_roles()
         assert (len(roles) == len(players))
-        actions = [None] * len(roles)
-        players = dict(zip(roles, list(map(list, zip(players, actions)))))
+        players = dict(zip(roles, list(map(list, zip(players, [None] * len(roles))))))  # dict(role, (Player, Action))
         self.match = {'MatchEntry': MatchEntry(matchID, gdl_rules, startclock, playclock),
                       'Simulator': simulator,
                       'Players': players,
-                      'State': None}
+                      'State': None,
+                      'JointAction': JointAction()}
 
-    def run_match(self):
-        # START MATCH
+    def run_match(self, prettyprinter):
+        # ...START...
         socket.setdefaulttimeout(self.match['MatchEntry'].startclock)
         self.thread_roles(self.send_start)
         self.match['State'] = self.match['Simulator'].initial_state()
         socket.setdefaulttimeout(self.match['MatchEntry'].playclock)
-        # PLAY MATCH
+        # ...PLAY...
         while not self.match['Simulator'].terminal(self.match['State']):
+            prettyprinter.print_state(self.match['State'])
+            # GET PLAYER ACTIONS
             self.thread_roles(self.send_play)
-            joint_actions = list()
-            for role, ((name, _, _), action) in self.match['Players'].items():
+            # CHECK LEGALITY OF MOVES
+            for role, (_, action) in self.match['Players'].items():
                 legal_actions = self.match['Simulator'].legal_actions(self.match['State'], role)
                 if action not in legal_actions:
                     action = random.choice(legal_actions)
-                joint_actions.append(action)
-            self.match['State'] = self.match['Simulator'].next_state(self.match['State'], joint_actions)
-        # STOP MATCH
+                self.match['JointAction'].set_move(role, action)
+            # ADVANCE STATE
+            self.match['State'] = self.match['Simulator'].next_state(self.match['State'], self.match['JointAction'])
+        # ...STOP...
+        prettyprinter.print_state(self.match['State'])
         self.thread_roles(self.send_stop)
-        print(f"Match successfully ended...")
-        [print(f"{role}: {goal}") for role, goal in self.match['MatchEntry'].results.items()]
+        for role in self.match['Players']:
+            goal_value = self.match['Simulator'].goal(self.match['State'], role)
+            self.match['MatchEntry'].add_result(role, goal_value)
 
-    def send_start(self, role):
-        msg = Message(MessageType.START,
-                      args=[self.match['MatchEntry'].matchID,
-                            role,
-                            self.match['MatchEntry'].gdlrules,
-                            self.match['MatchEntry'].startclock,
-                            self.match['MatchEntry'].playclock])
-        self.send_message(role, msg)
 
-    def send_play(self, role):
-        jointactions = [action for _, (_, action) in self.match['Players'].items()]
-        msg = Message(MessageType.PLAY,
-                      args=[self.match['MatchEntry'].matchID,
-                            jointactions])
-        response_msg = self.send_message(role, msg)
-        self.match['Players'][role][1] = response_msg.args[0]
-
-    def send_stop(self, role):
-        jointactions = [action for _, (_, action) in self.match['Players'].items()]
-        msg = Message(MessageType.STOP,
-                      args=[self.match['MatchEntry'].matchID,
-                            jointactions])
-        self.send_message(role, msg)
-        goal_value = self.match['Simulator'].goal(self.match['State'], role)
-        self.match['MatchEntry'].add_result(role, goal_value)
+class Player:
+    def __init__(self, name, host, port):
+        self.name = name
+        self.host = host
+        self.port = port
 
 
 if __name__ == "__main__":
@@ -121,7 +135,7 @@ if __name__ == "__main__":
     def player(s):
         try:
             name, host, port = s[1:-1].split(',')
-            return str(name), str(host), int(port)
+            return Player(str(name), str(host), int(port))
         except Exception:
             raise argparse.ArgumentTypeError('Player list must be of form (name, host, port)')
 
@@ -144,4 +158,5 @@ if __name__ == "__main__":
     manager = GameManager(args.port)
     gdl_rules = read_rules(os.path.join('../games', args.game))
     manager.setup_match(gdl_rules, args.players, args.startclock, args.playclock)
-    manager.run_match()
+    pp = PrettyPrinter.printerClass(args.game)()
+    manager.run_match(prettyprinter=pp)
