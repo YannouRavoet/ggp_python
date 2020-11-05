@@ -1,13 +1,13 @@
 from problog.engine import DefaultEngine
 from problog.program import PrologString
-from problog.logic import term2list
+from problog.logic import term2list, Var
 from utils.gdl import gdlstring2problogstring, read_rules, problogterms2problogstring
 
 
 class ProblogEngine:
     def __init__(self, gdl_rules):
         self.engine = DefaultEngine()
-        self.base_string = '\n'.join([gdlstring2problogstring(gdl_rules), read_rules('utils/problog.pl')])
+        self.base_string = '\n'.join([gdlstring2problogstring(gdl_rules), read_rules('utils/problog.pl', cmt_token='%')])
         self.base_db = self.engine.prepare(PrologString(self.base_string))
 
     def query(self, query, state=None, return_bool=False, backend=None):
@@ -28,8 +28,10 @@ class ProblogEngine:
             return len(results) != 0
         else:
             if backend is None:
-                return [result[query.args.index(None)] for result in results]
-            return term2list(results[0][0])
+                target_index = query.args.index(None)
+            else:   # swipl-backend
+                target_index = query.args.index(list(filter(lambda arg: isinstance(arg, Var), query.args))[0])
+            return [result[target_index] for result in results]
 
     def clear_stack(self):
         self.engine.shrink_stack()

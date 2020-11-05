@@ -1,7 +1,6 @@
-import random
 from copy import deepcopy
 from itertools import product
-from problog.logic import Term, Constant, Var
+from problog.logic import Term, Constant, Var, list2term
 from utils.problog import ProblogEngine
 
 
@@ -59,8 +58,8 @@ class Simulator(object):
         return self.engine.query(query=Term('terminal'), state=state, return_bool=True)
 
     def goal(self, state, role):
-        values = self.engine.query(Term('goal', *[role, None]), state=state)
-        return int(values[0])
+        goal = self.engine.query(Term('goal', *[role, None]), state=state)
+        return int(goal[0])
 
     def next_state(self, state, jointactions):
         state_actions = state.with_actions(jointactions)
@@ -68,11 +67,9 @@ class Simulator(object):
         return State(new_facts)
 
     def simulate(self, state, role):
-        while not self.terminal(state):
-            jointaction = self.legal_jointaction(state)
-            state = self.next_state(state, jointaction)
-        goal = self.goal(state, role)
-        return goal
+        goal = self.engine.query(Term('simulate', *[list2term(state.facts), role, Var('AvgValue')]),
+                                 backend='swipl')
+        return int(goal[0])
 
     # GDL-II
     def has_random(self):

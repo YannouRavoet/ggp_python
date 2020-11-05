@@ -94,7 +94,7 @@ class GDLtoProbLogParser(GDLParser):
         return list(toks.statements)
 
 
-def read_rules(file):
+def read_rules(file, cmt_token=';'):
     """
     Reads game rules, ignores comments.
     :param file: path to input file
@@ -102,7 +102,7 @@ def read_rules(file):
     """
     with open(file) as f:
         rules = '\n'.join(line for line in (line.strip() for line in f.readlines())
-                          if line and not line.startswith((';', '%')))
+                          if line and not line.startswith(cmt_token))
     return rules
 
 
