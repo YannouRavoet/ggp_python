@@ -49,9 +49,9 @@ class GamePlayer(HTTPServer):
         self.msg_time = rcvtime
         if msg.type == MessageType.START:
             return self.handle_start(msg.args[0], msg.args[1], msg.args[2], msg.args[3], msg.args[4])
-        elif msg.type == MessageType.PLAY or msg.type == MessageType.PLAY_II:
+        elif msg.type == MessageType.PLAY:
             return self.handle_play(msg.args[0], msg.args[1])
-        elif msg.type == MessageType.STOP or msg.type == MessageType.STOP_II:
+        elif msg.type == MessageType.STOP:
             return self.handle_stop(msg.args[0], msg.args[1])
         else:
             raise NotImplementedError
@@ -63,7 +63,7 @@ class GamePlayer(HTTPServer):
                       'Simulator': simulator,
                       'Role': role,
                       'State': simulator.initial_state()}
-        timed_start = ClockedFunction(self.clock_left(), self.prepare)
+        timed_start = ClockedFunction(self.clock_left(), self.start_player)
         timed_start()
         return Message(MessageType.READY)
 
@@ -72,10 +72,9 @@ class GamePlayer(HTTPServer):
         if len(actions) != 0:
             actions = JointAction(self.match['Simulator'].player_roles(), actions)
             self.match['State'] = self.match['Simulator'].next_state(self.match['State'], actions)
-            self.update_search_root(actions)
 
-        search_function = ClockedFunction(self.clock_left(), self.calculate_action)
-        action = search_function()
+        search_function = ClockedFunction(self.clock_left(), self.play_player)
+        action = search_function(actions)
         return Message(MessageType.ACTION, [action])
 
     def handle_stop(self, matchID, actions):
@@ -89,13 +88,10 @@ class GamePlayer(HTTPServer):
     """""""""""""""""""""""
     PLAYER IMPLEMENTATIONS
     """""""""""""""""""""""
-    def prepare(self):
+    def start_player(self):
         pass
 
-    def update_search_root(self, jointaction):
-        pass
-
-    def calculate_action(self):
+    def play_player(self, jointaction):
         raise NotImplementedError
 
     """""""""
@@ -127,7 +123,7 @@ if __name__ == "__main__":
     """""""""""""""
     from gameplayers import LegalPlayer, RandomPlayer, MCTSPlayer
 
-    player = MCTSPlayer(args.name, args.port)
+    player = MCTSPlayer(args.name, args.port, expl_bias=200)
     try:
         player.serve_forever()
     except KeyboardInterrupt:

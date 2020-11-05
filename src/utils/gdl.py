@@ -85,8 +85,6 @@ class GDLtoProbLogParser(GDLParser):
                 return Or(args[0], args[1])
             elif name == 'not':
                 return Not('\+', args[0])
-            elif name == 'distinct':
-                return Term('\+', Term('=', *args))
             elif name == 'true':
                 return args[0]
             return Term(name, *args)
@@ -96,16 +94,16 @@ class GDLtoProbLogParser(GDLParser):
         return list(toks.statements)
 
 
-def read_rules(gdl_file):
+def read_rules(file):
     """
     Reads game rules, ignores comments.
-    :param gdl_file: path to input file
-    :return: string of game rules in KIF format
+    :param file: path to input file
+    :return: string of game rules; each separated by \n
     """
-    with open(gdl_file) as f:
-        gdl_rules = '\n'.join(line for line in (line.strip() for line in f.readlines())
-                              if line and not line.startswith(';'))
-    return gdl_rules
+    with open(file) as f:
+        rules = '\n'.join(line for line in (line.strip() for line in f.readlines())
+                          if line and not line.startswith((';', '%')))
+    return rules
 
 
 def write_rules(output_file, problogterms):
@@ -130,3 +128,7 @@ def gdlstring2problogterms(gdl_rules):
 
 def problogterms2problogstring(problogterms):
     return '\n'.join([str(term) + '.' for term in problogterms])
+
+
+def gdlstring2problogstring(gdl_rules):
+    return problogterms2problogstring(gdlstring2problogterms(gdl_rules))

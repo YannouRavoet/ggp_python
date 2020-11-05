@@ -1,7 +1,7 @@
+import random
 from copy import deepcopy
 from itertools import product
-
-from problog.logic import Term, Constant
+from problog.logic import Term, Constant, Var
 from utils.problog import ProblogEngine
 
 
@@ -38,7 +38,11 @@ class Simulator(object):
         return State(facts)
 
     def legal_actions(self, state, role):
-        return self.engine.query(Term('legal', *[role, None]), state=state)
+        # shortcoming of most GDL descriptions: legality of actions is not dependent on terminality of state
+        if not self.terminal(state):
+            return self.engine.query(Term('legal', *[role, None]), state=state)
+        else:
+            return []
 
     def legal_jointaction_permutations(self, state):
         legal_actions = dict()
@@ -46,6 +50,10 @@ class Simulator(object):
             legal_actions[role] = self.legal_actions(state, role)
         permutations = [list(action) for action in product(*legal_actions.values())]
         return [JointAction(list(legal_actions.keys()), perm) for perm in permutations]
+
+    def legal_jointaction(self, state):
+        actions = self.engine.query(query=Term('legal_jointaction', Var('Action')), state=state, backend='swipl')
+        return JointAction(self.roles(), actions)
 
     def terminal(self, state):
         return self.engine.query(query=Term('terminal'), state=state, return_bool=True)
@@ -58,6 +66,13 @@ class Simulator(object):
         state_actions = state.with_actions(jointactions)
         new_facts = self.engine.query(Term('next',  None), state=state_actions)
         return State(new_facts)
+
+    def simulate(self, state, role):
+        while not self.terminal(state):
+            jointaction = self.legal_jointaction(state)
+            state = self.next_state(state, jointaction)
+        goal = self.goal(state, role)
+        return goal
 
     # GDL-II
     def has_random(self):
@@ -82,6 +97,9 @@ class State:
 
     def __repr__(self):
         return ', '.join([str(fact) for fact in self.facts])
+
+    def sorted(self):
+        return sorted(self.facts, key=lambda t: str(t))
 
 
 class JointAction:
@@ -109,3 +127,6 @@ class JointAction:
 
     def __repr__(self):
         return str(self.actions)
+
+    def __len__(self):
+        return len(self.actions)
