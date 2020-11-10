@@ -28,10 +28,13 @@ class ProblogEngine:
             return len(results) != 0
         else:
             if backend is None:
-                target_index = query.args.index(None)
-            else:   # swipl-backend
-                target_index = query.args.index(list(filter(lambda arg: isinstance(arg, Var), query.args))[0])
-            return [result[target_index] for result in results]
+                target_indices = [i for i in range(len(query.args)) if query.args[i] is None]
+            elif backend == 'swipl':
+                target_indices = [i for i in range(len(query.args)) if isinstance(query.args[i], Var)]
+            else:
+                raise NotImplementedError
+            return [list(map(result.__getitem__, target_indices)) for result in results] if len(target_indices) > 1 \
+                else [result[target_indices[0]] for result in results]
 
     def clear_stack(self):
         self.engine.shrink_stack()

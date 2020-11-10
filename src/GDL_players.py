@@ -1,5 +1,4 @@
 import random
-from copy import copy
 from math import sqrt, log
 
 from gameplayer import GamePlayer, ClockOverException
@@ -7,16 +6,16 @@ from gameplayer import GamePlayer, ClockOverException
 
 class LegalPlayer(GamePlayer):
     """LegalPlayer selects the first legal action each round."""
-    def play_player(self, jointaction):
-        legal_actions = self.match['Simulator'].legal_actions(self.match['State'], self.match['Role'])
+    def play_player(self, jointaction, *args, **kwargs):
+        legal_actions = self.match['Simulator'].legal_actions(self.match['States'][0], self.match['Role'])
         assert (len(legal_actions))
         return legal_actions[0]
 
 
 class RandomPlayer(GamePlayer):
     """RandomPlayer selects a random legal action each round."""
-    def play_player(self, jointaction):
-        legal_actions = self.match['Simulator'].legal_actions(self.match['State'], self.match['Role'])
+    def play_player(self, jointaction, *args, **kwargs):
+        legal_actions = self.match['Simulator'].legal_actions(self.match['States'][0], self.match['Role'])
         assert (len(legal_actions))
         return random.choice(legal_actions)
 
@@ -61,19 +60,26 @@ class MCTSPlayer(GamePlayer):
         def is_leaf(self):
             return len(self.children) == 0
 
-        def UCB1(self, bias=2):
-            if self.nb_visit != 0 and self.parent is not None:
-                return (self.total_goal / self.nb_visit) + bias * sqrt(log(self.parent.nb_visit) / self.nb_visit)
-            else:
-                return 0
+        def UCB1(self, bias):
+            return (self.total_goal / self.nb_visit) + bias * sqrt(log(self.parent.nb_visit) / self.nb_visit) \
+                if self.nb_visit != 0 and self.parent is not None \
+                else 0
 
-        def print(self, level=0):
-            print("\t"*level + str(self))
+        def AVG(self):
+            return self.total_goal/self.nb_visit \
+                if self.nb_visit != 0 \
+                else 0
+
+        def print(self, bias, level=0):
+            print("\t"*level + self.stats(bias))
             for child in self.explored_children():
-                child.print(level+1)
+                child.print(bias, level+1)
 
-        def __str__(self):
-            return f'{self.state.sorted()}: [UCB1={self.UCB1(200)}]'
+        def stats(self, bias):
+            return f'{self.jointaction}: ' \
+                   f'[UCB1={self.UCB1(bias):.2f},' \
+                   f' VISITS={self.nb_visit},' \
+                   f' AVG={self.AVG()}] '
 
     """MCTSPlayer builds a game tree using Monte-Carlo Tree Search with Upper Confidence Bound 1 (UCB1)."""
     def __init__(self, name, port, expl_bias=2):
@@ -104,42 +110,45 @@ class MCTSPlayer(GamePlayer):
         return node
 
     # PHASE 3: Simulate a random game from the given node on
-    def simulate(self, node):
-        return self.match['Simulator'].simulate(node.state, self.match['Role'])
+    def simulate(self, node, rounds=1):
+        return self.match['Simulator'].simulate(node.state, self.match['Role'], rounds)
 
     # PHASE 4: Backpropagate the terminal value through the ancestor nodes
-    def backprop(self, node, value):
+    def backprop(self, node, value, visits=1):
         if node is not None:
-            node.nb_visit += 1
+            node.nb_visit += visits
             node.total_goal += value
-            self.backprop(node.parent, value)
+            self.backprop(node.parent, value, visits)
 
 
     """""""""""""""""""""
      GAMEPLAYER OVERRIDE
     """""""""""""""""""""
     def start_player(self):
-        self.root_node = self.make_node(None, None, self.match['State'])
+        self.root_node = self.make_node(None, None, self.match['States'][0])
 
-    def play_player(self, jointaction):
+    def play_player(self, jointaction, *args, **kwargs):
         # UPDATE ROOT NODE TO CURRENT STATE
         if len(jointaction) != 0:
             self.root_node = self.root_node.children[jointaction]
             if self.root_node is None:  # child was not expanded yet
-                self.root_node = self.make_node(None, None, self.match['State'])
+                self.root_node = self.make_node(None, None, self.match['States'][0])
             else:
                 self.root_node.parent = None
+                self.root_node.jointaction = None
         # MCTS FROM CURRENT STATE
         loops = 0
+        rounds_per_loop = 1
         while True:
             try:
                 node = self.select(self.root_node)
                 node = self.expand(node)
-                goal_value = self.simulate(node)
-                self.backprop(node, goal_value)
-                loops += 1
+                goal_value = self.simulate(node, rounds=rounds_per_loop)
+                self.backprop(node, goal_value, visits=rounds_per_loop)
+                loops += rounds_per_loop
             except ClockOverException:
                 self.match['Simulator'].engine.clear_stack()
                 print(f'ran {loops} MCTS loops')
-                best_child = max(self.root_node.explored_children(), key=lambda c: c.UCB1(self.expl_bias))
+                self.root_node.print(self.expl_bias)
+                best_child = max(self.root_node.explored_children(), key=lambda c: c.AVG())
                 return best_child.jointaction.actions[self.match['Role']]

@@ -31,7 +31,6 @@ class ClockedFunction:
 
 
 # TODO: Create child class for GDL-II that overwrites handle_play and handle_stop.
-#       Potentially overwrites handle_start to make a list of self.match['State']
 class GamePlayer(HTTPServer):
     def __init__(self, name, port):
         HTTPServer.__init__(self, ('', port), MessageHandler)
@@ -39,7 +38,7 @@ class GamePlayer(HTTPServer):
         self.match = dict()
 
         self.msg_time = None        # time at which last message was received
-        self.reply_buffer = 1       # nb seconds saved for communication delay
+        self.reply_buffer = 1       # nb seconds between ClockOverException and deadline of response
         self.reply_deadline = None  # time at which the manager needs an answer
 
     """""""""""
@@ -53,35 +52,39 @@ class GamePlayer(HTTPServer):
             return self.handle_play(msg.args[0], msg.args[1])
         elif msg.type == MessageType.STOP:
             return self.handle_stop(msg.args[0], msg.args[1])
+        elif msg.type == MessageType.PLAY_II:
+            return self.handle_play(msg.args[0], msg.args[1], msg.args[2])
+        elif msg.type == MessageType.STOP_II:
+            return self.handle_stop(msg.args[0], msg.args[1], msg.args[2])
         else:
             raise NotImplementedError
 
     def handle_start(self, matchID, role, gdl_rules, startclock, playclock):
         self.set_reply_deadline(startclock)
         simulator = Simulator(gdl_rules)
-        self.match = {'MatchEntry': MatchEntry(matchID, gdl_rules, startclock, playclock),
+        self.match = {'MatchEntry': MatchEntry(matchID, gdl_rules, startclock, playclock, simulator.get_gametype()),
                       'Simulator': simulator,
                       'Role': role,
-                      'State': simulator.initial_state()}
+                      'States': [simulator.initial_state()]}
         timed_start = ClockedFunction(self.clock_left(), self.start_player)
         timed_start()
         return Message(MessageType.READY)
 
-    def handle_play(self, matchID, actions):
+    def handle_play(self, matchID, actions, *args, **kwargs):
         self.set_reply_deadline(self.match['MatchEntry'].playclock)
         if len(actions) != 0:
             actions = JointAction(self.match['Simulator'].player_roles(), actions)
-            self.match['State'] = self.match['Simulator'].next_state(self.match['State'], actions)
+            self.match['States'] = [self.match['Simulator'].next_state(self.match['States'][0], actions)]
 
         search_function = ClockedFunction(self.clock_left(), self.play_player)
         action = search_function(actions)
         return Message(MessageType.ACTION, [action])
 
-    def handle_stop(self, matchID, actions):
+    def handle_stop(self, matchID, actions, *args, **kwargs):
         self.set_reply_deadline(self.match['MatchEntry'].playclock)
         actions = JointAction(self.match['Simulator'].player_roles(), actions)
-        self.match['State'] = self.match['Simulator'].next_state(self.match['State'], actions)
-        goal_value = self.match['Simulator'].goal(self.match['State'], self.match['Role'])
+        self.match['States'] = [self.match['Simulator'].next_state(self.match['States'][0], actions)]
+        goal_value = self.match['Simulator'].goal(self.match['States'][0], self.match['Role'])
         self.match['MatchEntry'].add_result(self.match['Role'], goal_value)
         return Message(MessageType.DONE)
 
@@ -91,7 +94,7 @@ class GamePlayer(HTTPServer):
     def start_player(self):
         pass
 
-    def play_player(self, jointaction):
+    def play_player(self, jointaction, *args, **kwargs):
         raise NotImplementedError
 
     """""""""
@@ -102,6 +105,26 @@ class GamePlayer(HTTPServer):
 
     def clock_left(self):
         return self.reply_deadline - time.time()
+
+
+class GamePlayerII(GamePlayer):
+    def handle_play(self, matchID, action, percepts=None, *args, **kwargs):
+        self.set_reply_deadline(self.match['MatchEntry'].playclock)
+        # GET POSSIBLE JOINTACTIONS FROM PERCEPTS
+        # UPDATE POSSIBLE STATES self.match['States']
+        # SEARCH BEST ACTION
+        search_function = ClockedFunction(self.clock_left(), self.play_player)
+        action = search_function()
+
+    def handle_stop(self, matchID, action, percepts=None, *args, **kwargs):
+        self.set_reply_deadline(self.match['MatchEntry'].playclock)
+        # GET POSSIBLE ACTIONS FROM PERCEPTS
+        # UPDATE POSSIBLE STATES
+        # GET POSSIBLE GOAL VALUES
+        return None
+
+    def play_player(self, action, percepts=None, *args, **kwargs):
+        raise NotImplementedError
 
 
 if __name__ == "__main__":
@@ -121,9 +144,9 @@ if __name__ == "__main__":
     """""""""""""""
     RUN GAMEPLAYER
     """""""""""""""
-    from gameplayers import LegalPlayer, RandomPlayer, MCTSPlayer
+    from GDL_players import LegalPlayer, RandomPlayer, MCTSPlayer
 
-    player = MCTSPlayer(args.name, args.port, expl_bias=200)
+    player = MCTSPlayer(args.name, args.port, expl_bias=2)
     try:
         player.serve_forever()
     except KeyboardInterrupt:

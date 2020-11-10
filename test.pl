@@ -1,56 +1,61 @@
-role(white).
-role(black).
-base(cell(_m,_n,x)) :- index(_m), index(_n).
-base(cell(_m,_n,o)) :- index(_m), index(_n).
-base(cell(_m,_n,b)) :- index(_m), index(_n).
-base(control(white)).
-base(control(black)).
-input(_r,mark(_m,_n)) :- role(_r), index(_m), index(_n).
-input(_r,noop) :- role(_r).
-index(1).
-index(2).
-index(3).
-init(cell(1,1,b)).
-init(cell(1,2,b)).
-init(cell(1,3,b)).
-init(cell(2,1,b)).
-init(cell(2,2,b)).
-init(cell(2,3,b)).
-init(cell(3,1,b)).
-init(cell(3,2,b)).
-init(cell(3,3,b)).
-init(control(white)).
-legal(_w,mark(_x,_y)) :- cell(_x,_y,b), control(_w).
-legal(white,noop) :- control(black).
-legal(black,noop) :- control(white).
-next(cell(_m,_n,x)) :- does(white,mark(_m,_n)), cell(_m,_n,b).
-next(cell(_m,_n,o)) :- does(black,mark(_m,_n)), cell(_m,_n,b).
-next(cell(_m,_n,_w)) :- cell(_m,_n,_w), \+(=(_w,b)).
-next(cell(_m,_n,b)) :- does(_w,mark(_j,_k)), cell(_m,_n,b), \+(=(_m,_j)).
-next(cell(_m,_n,b)) :- does(_w,mark(_j,_k)), cell(_m,_n,b), \+(=(_n,_k)).
-next(control(white)) :- control(black).
-next(control(black)) :- control(white).
-goal(white,100) :- line(x), \+line(o).
-goal(white,50) :- \+line(x), \+line(o).
-goal(white,0) :- \+line(x), line(o).
-goal(black,100) :- \+line(x), line(o).
-goal(black,50) :- \+line(x), \+line(o).
-goal(black,0) :- line(x), \+line(o).
-terminal :- line(x).
-terminal :- line(o).
-terminal :- \+open.
-row(_m,_x) :- cell(_m,1,_x), cell(_m,2,_x), cell(_m,3,_x).
-column(_n,_x) :- cell(1,_n,_x), cell(2,_n,_x), cell(3,_n,_x).
-diagonal(_x) :- cell(1,1,_x), cell(2,2,_x), cell(3,3,_x).
-diagonal(_x) :- cell(1,3,_x), cell(2,2,_x), cell(3,1,_x).
-line(_x) :- row(_m,_x).
-line(_x) :- column(_m,_x).
-line(_x) :- diagonal(_x).
-open :- cell(_m,_n,b).
+role(candidate).
+role(random).
+init(closed(1)).
+init(closed(2)).
+init(closed(3)).
+init(step(1)).
+legal(random,hide_car(_d)) :- step(1), closed(_d).
+legal(random,open_door(_d)) :- step(2), closed(_d), \+car(_d), \+chosen(_d).
+legal(random,noop) :- step(3).
+legal(candidate,choose(_d)) :- step(1), closed(_d).
+legal(candidate,noop) :- step(2).
+legal(candidate,switch) :- step(3).
+legal(candidate,noop) :- step(3).
+sees(candidate,does(candidate,_m)) :- does(candidate,_m).
+sees(candidate,open_door(_d)) :- does(random,open_door(_d)).
+sees(candidate,car(_d)) :- step(3), car(_d), next_chosen(_d).
+next(car(_d)) :- does(random,hide_car(_d)).
+next(car(_d)) :- car(_d).
+next(closed(_d)) :- closed(_d), \+does(random,open_door(_d)).
+next(chosen(_d)) :- next_chosen(_d).
+next_chosen(_d) :- does(candidate,choose(_d)).
+next_chosen(_d) :- chosen(_d), \+does(candidate,switch).
+next_chosen(_d) :- does(candidate,switch), closed(_d), \+chosen(_d).
+next(step(2)) :- step(1).
+next(step(3)) :- step(2).
+next(step(4)) :- step(3).
+terminal :- step(4).
+goal(random,100).
+goal(candidate,100) :- chosen(_d), car(_d).
+goal(candidate,0) :- chosen(_d), \+car(_d).
+car(_d) :- fail.
+chosen(_d) :- fail.
+
 
 distinct(X,Y) :-
     X \= Y.
 % Backend methods to more efficiently use the ProbLog engine when having to make multiple calls.
+
+/*
+make_jointaction(Role, Action, (Role, Action)).
+legal_actions(Role, Actions) :-
+    findall(Action, legal(Role, Action), Actions).
+
+permutation(Roles, ActionLists, Permutation):-
+    permutation_iter(Roles, ActionLists, [], Permutation).
+
+permutation_iter([], [],  Permutations, Permutations).
+permutation_iter([RolesH|RolesT], [ActionsH|ActionsT],  TempPermActions, Permutations):-
+    member(Action, ActionsH),
+    make_jointaction(RolesH, Action, NewPermAction),
+    permutation_iter(RolesT, ActionsT, [NewPermAction|TempPermActions], Permutations).
+
+legal_jointaction_permutation(Permutations):-
+    findall(Role, role(Role), Roles),
+    maplist(legal_actions, Roles, ActionsLists),
+    findall(Perm, permutation(Roles, ActionsLists, Perm), Permutations).
+*/
+
 
 % legal_jointaction\1 returns a random jointaction (one action per role) that is legal in the current state.
 legal_jointaction(JointAction) :-
@@ -91,13 +96,20 @@ simulate(State, Role, Value) :-
         simulate(NextState, Role, Value)
     ).
 
-simulate(State, Role, AvgValue,Times) :-
-    simulate_iter(State, Role, AvgValue, 0, Times, Times).
+simulate(State, Role, Total, Rounds) :-
+    simulate_iter(State, Role, 0, Total, Rounds).
 
-simulate_iter(_, _, AvgValue, Value, 0, Times):-
-    AvgValue is Value/Times.
-simulate_iter(State, Role, AvgValue, Total, Left, Times):-
+simulate_iter(_, _, Total, Total, 0).
+simulate_iter(State, Role, Temp, Total, Rounds):-
     simulate(State, Role, NewValue),
-    NewTotal is Total + NewValue,
-    NewLeft is Left - 1,
-    simulate_iter(State, Role, AvgValue, NewTotal, NewLeft, Times).
+    NewTemp is Temp + NewValue,
+    NewRounds is Rounds - 1,
+    simulate_iter(State, Role, NewTemp, Total, NewRounds).
+
+
+% minmax_goals\3 returns the minimum and maximum goal values for a role.
+% This is used to normalize goal value between 1-100.
+minmax_goals(Role, Min, Max):-
+    findall(Goal, clause(goal(Role, Goal), _), Goals),
+    min_list(Goals, Min),
+    max_list(Goals, Max).

@@ -55,37 +55,30 @@ class Message:
         """
         if message == "ready":
             return Message(MessageType.READY)
-
         elif message == "done":
             return Message(MessageType.DONE)
-
         elif message.startswith("start"):
             m = re.match(r"start\((\w*), (\w*), ([\w\s|\\,?()\[\]{}<=+]*), ([0-9]*), ([0-9]*)\)", message)
             return Message(MessageType.START,
-                           args=[m.group(1),
-                                 Term(m.group(2)),
-                                 m.group(3),
-                                 int(m.group(4)),
-                                 int(m.group(5))])
-
+                           args=[m.group(1), Term(m.group(2)), m.group(3), int(m.group(4)), int(m.group(5))])
         elif message.startswith("play"):
-            m = re.match(r"play\((\w*), (\[[\w\s|\\,?()\[\]{}<=+]*])\)", message)
-            if m is None:
-                # TODO: handle PLAY_II messages
-                return Message(MessageType.PLAY_II)
-            return Message(MessageType.PLAY,
-                           args=[m.group(1),
-                                 term2list(Term.from_string(m.group(2)))])
-
+            m = re.match(r"play\((\w*), (\[.*])\)", message)
+            if m is not None:
+                return Message(MessageType.PLAY,
+                               args=[m.group(1), term2list(Term.from_string(m.group(2)))])
+            else:
+                m = re.match(r"play\((\w*), (.*), (\[.*])\)", message)
+                return Message(MessageType.PLAY_II,
+                               args=[m.group(1), Term(m.group(2)), term2list(Term.from_string(m.group(3)))])
         elif message.startswith("stop"):
-            m = re.match(r"stop\((\w*), ([\w\s|\\,?()\[\]{}<=+]*)\)", message)
-            if m is None:
-                # TODO: handle STOP_II messages
-                return Message(MessageType.STOP_II)
-            return Message(MessageType.STOP,
-                           args=[m.group(1),
-                                 term2list(Term.from_string(m.group(2)))])
-
+            m = re.match(r"stop\((\w*), (\[.*])\)", message)
+            if m is not None:
+                return Message(MessageType.STOP,
+                               args=[m.group(1), term2list(Term.from_string(m.group(2)))])
+            else:
+                m = re.match(r"stop\((\w*), (.*), (\[.*])\)", message)
+                return Message(MessageType.STOP_II,
+                               args=[m.group(1), Term(m.group(2)), term2list(Term.from_string(m.group(3)))])
         else:
             return Message(MessageType.ACTION,
                            args=[Term.from_string(message)])
@@ -117,9 +110,5 @@ class MessageHandler(BaseHTTPRequestHandler):
             print(f"=> {text}")
 
     def log_message(self, format, *args):
-        """
-        Overrides default log printing to keep from crowding the output console.
-        """
+        """Overrides default log printing to keep from crowding the output console."""
         pass
-
-

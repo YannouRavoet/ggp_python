@@ -1,16 +1,23 @@
 from copy import deepcopy
+from enum import Enum
 from itertools import product
 from problog.logic import Term, Constant, Var, list2term
 from utils.problog import ProblogEngine
 
 
+class GameType(Enum):
+    GDL = 1
+    GDL_II = 2
+
+
 class MatchEntry(object):
-    def __init__(self, matchID, gdlrules, startclock, playclock):
+    def __init__(self, matchID, gdlrules, startclock, playclock, gametype):
         self.matchID = matchID
         self.gdlrules = gdlrules
         self.startclock = startclock
         self.playclock = playclock
         self.results = dict()
+        self.gametype = gametype
 
     def add_result(self, role, goal):
         self.results[role] = goal
@@ -18,12 +25,26 @@ class MatchEntry(object):
 
 
 class Simulator(object):
-    """
-    Used to make inferences with the provided set of rules.
-    """
+    """Used to make inferences with the provided set of rules."""
+
     def __init__(self, gdl_rules):
         self.gdl_rules = gdl_rules
         self.engine = ProblogEngine(gdl_rules)
+
+        self._goalnorm = self._get_goalnorms()  # dict<Role, NormFunction> used to normalize goal values
+
+    def _get_goalnorms(self):
+        goalnorms = dict()
+        for role in self.roles():
+            [[mn, mx]] = self.engine.query(query=Term('minmax_goals', *[role, Var('Min'), Var('Max')]),
+                                           backend='swipl')
+            goalnorms[role] = lambda goal: (goal - int(mn)) / (int(mx) - int(mn))
+        return goalnorms
+
+    def get_gametype(self):
+        if self.engine.query(query=Term('clause', *[Term('sees', *[None, None]), None]), return_bool=True):
+            return GameType.GDL_II
+        return GameType.GDL
 
     # GDL
     def roles(self):
@@ -37,11 +58,11 @@ class Simulator(object):
         return State(facts)
 
     def legal_actions(self, state, role):
-        # shortcoming of most GDL descriptions: legality of actions is not dependent on terminality of state
-        if not self.terminal(state):
-            return self.engine.query(Term('legal', *[role, None]), state=state)
-        else:
-            return []
+        if not self.terminal(
+                state):  # legality of action does not depend on terminality of state in most GDL desriptions
+            return self.engine.query(query=Term('legal', *[role, None]),
+                                     state=state)
+        return []
 
     def legal_jointaction_permutations(self, state):
         legal_actions = dict()
@@ -57,32 +78,37 @@ class Simulator(object):
     def terminal(self, state):
         return self.engine.query(query=Term('terminal'), state=state, return_bool=True)
 
-    def goal(self, state, role):
+    def goal(self, state, role, norm=True):
         goal = self.engine.query(Term('goal', *[role, None]), state=state)
-        return int(goal[0])
+        return self._goalnorm[role](int(goal[0])) if norm else int(goal[0])
 
     def next_state(self, state, jointactions):
         state_actions = state.with_actions(jointactions)
-        new_facts = self.engine.query(Term('next',  None), state=state_actions)
+        new_facts = self.engine.query(Term('next', None), state=state_actions)
         return State(new_facts)
 
-    def simulate(self, state, role):
-        goal = self.engine.query(Term('simulate', *[list2term(state.facts), role, Var('AvgValue')]),
-                                 backend='swipl')
-        return int(goal[0])
+    def simulate(self, state, role, rounds=1, norm=True):
+        total_goal = 0
+        for _ in range(rounds):
+            round_goal = self.engine.query(query=Term('simulate', *[list2term(state.facts), role, Var('Value')]),
+                                           backend='swipl')
+            total_goal += self._goalnorm[role](int(round_goal[0])) if norm else int(round_goal[0])
+        return total_goal
 
     # GDL-II
-    def has_random(self):
-        return self.engine.query(query=Term('role', Constant('random')), return_bool=True)
+    def random(self):
+        if self.roles().__contains__(Term('random')):
+            return {'Role': Term('random'), 'Action': None}
+        return None
 
-    def percepts(self, state, role, actions):
-        pass
+    def percepts(self, state, role, jointactions):
+        state_actions = state.with_actions(jointactions)
+        return self.engine.query(query=Term('sees', *[role, None]), state=state_actions)
 
 
 class State:
-    """
-    Represents the state of a game.
-    """
+    """Represents the state of a game."""
+
     def __init__(self, facts):
         self.facts = facts
 
@@ -92,26 +118,32 @@ class State:
             new_facts.append(Term('does', *[role, action]))
         return State(new_facts)
 
-    def __repr__(self):
-        return ', '.join([str(fact) for fact in self.facts])
+    def with_percepts(self, role, percepts):
+        new_facts = deepcopy(self.facts)
+        for fact in percepts.facts:
+            new_facts.append(Term('sees', *[role, fact]))
+        return State(new_facts)
 
     def sorted(self):
         return sorted(self.facts, key=lambda t: str(t))
 
+    def __repr__(self):
+        return ', '.join([str(fact) for fact in self.facts])
+
 
 class JointAction:
-    """
-    Represents a move for each role in the game.
-    """
+    """Represents a move for each role in the game."""
+
     def __init__(self, roles=None, actions=None):
         if roles is not None and actions is not None:
-            assert(len(roles) == len(actions))
+            assert (len(roles) == len(actions))
             self.actions = dict(zip(roles, actions))
         else:
             self.actions = dict()
 
     def set_move(self, role, action):
-        self.actions[role] = action
+        if action is not None:
+            self.actions[role] = action
 
     def get_actions(self):
         return list(self.actions.values())
@@ -127,3 +159,10 @@ class JointAction:
 
     def __len__(self):
         return len(self.actions)
+
+
+class Percepts:
+    """Represents the percepts of a player"""
+
+    def __init__(self, facts):
+        self.facts = facts
