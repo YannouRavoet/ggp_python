@@ -94,7 +94,7 @@ class GamePlayer(HTTPServer):
     def start_player(self):
         pass
 
-    def play_player(self, jointaction, *args, **kwargs):
+    def play_player(self, *args, **kwargs):
         raise NotImplementedError
 
     """""""""
@@ -108,10 +108,16 @@ class GamePlayer(HTTPServer):
 
 
 class GamePlayerII(GamePlayer):
+    def __init__(self, name, port, nb_states=10):
+        super().__init__(name, port)
+        self.nb_states = nb_states  # the number of hypothetical states to keep track of
+
     def handle_play(self, matchID, action, percepts=None, *args, **kwargs):
         self.set_reply_deadline(self.match['MatchEntry'].playclock)
-        # GET POSSIBLE JOINTACTIONS FROM PERCEPTS
-        # UPDATE POSSIBLE STATES self.match['States']
+        # FOR EACH BELIEF STATE
+            # GET POSSIBLE JOINTACTIONS FROM PERCEPTS
+            # UPDATE STATES (ADDING HYPOTHETICAL STATES UNTIL self.nb_states IS REACHED
+        # MERGE EQUAL BELIEF STATES
         # SEARCH BEST ACTION
         search_function = ClockedFunction(self.clock_left(), self.play_player)
         action = search_function()
@@ -123,7 +129,7 @@ class GamePlayerII(GamePlayer):
         # GET POSSIBLE GOAL VALUES
         return None
 
-    def play_player(self, action, percepts=None, *args, **kwargs):
+    def play_player(self, *args, **kwargs):
         raise NotImplementedError
 
 

@@ -108,7 +108,6 @@ class Simulator(object):
 
 class State:
     """Represents the state of a game."""
-
     def __init__(self, facts):
         self.facts = facts
 
@@ -129,6 +128,9 @@ class State:
 
     def __repr__(self):
         return ', '.join([str(fact) for fact in self.facts])
+
+    def __eq__(self, other):
+        return self.sorted() == other.sorted()
 
 
 class JointAction:

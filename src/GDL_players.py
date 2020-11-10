@@ -6,7 +6,7 @@ from gameplayer import GamePlayer, ClockOverException
 
 class LegalPlayer(GamePlayer):
     """LegalPlayer selects the first legal action each round."""
-    def play_player(self, jointaction, *args, **kwargs):
+    def play_player(self, *args, **kwargs):
         legal_actions = self.match['Simulator'].legal_actions(self.match['States'][0], self.match['Role'])
         assert (len(legal_actions))
         return legal_actions[0]
@@ -14,7 +14,7 @@ class LegalPlayer(GamePlayer):
 
 class RandomPlayer(GamePlayer):
     """RandomPlayer selects a random legal action each round."""
-    def play_player(self, jointaction, *args, **kwargs):
+    def play_player(self, *args, **kwargs):
         legal_actions = self.match['Simulator'].legal_actions(self.match['States'][0], self.match['Role'])
         assert (len(legal_actions))
         return random.choice(legal_actions)
@@ -127,8 +127,9 @@ class MCTSPlayer(GamePlayer):
     def start_player(self):
         self.root_node = self.make_node(None, None, self.match['States'][0])
 
-    def play_player(self, jointaction, *args, **kwargs):
+    def play_player(self, *args, **kwargs):
         # UPDATE ROOT NODE TO CURRENT STATE
+        jointaction = args[0]
         if len(jointaction) != 0:
             self.root_node = self.root_node.children[jointaction]
             if self.root_node is None:  # child was not expanded yet
