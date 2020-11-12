@@ -19,7 +19,7 @@ next(car(_d)) :- car(_d).
 next(closed(_d)) :- closed(_d), \+does(random,open_door(_d)).
 next(chosen(_d)) :- next_chosen(_d).
 next_chosen(_d) :- does(candidate,choose(_d)).
-next_chosen(_d) :- chosen(_d), \+does(candidate,switch).
+next_chosen(_d) :- chosen(_d), \+does(candidate,switach).
 next_chosen(_d) :- does(candidate,switch), closed(_d), \+chosen(_d).
 next(step(2)) :- step(1).
 next(step(3)) :- step(2).
@@ -31,56 +31,47 @@ goal(candidate,0) :- chosen(_d), \+car(_d).
 car(_d) :- fail.
 chosen(_d) :- fail.
 
-
+% distinct/2 simply returns whether or not X and Y are different.
 distinct(X,Y) :-
     X \= Y.
-% Backend methods to more efficiently use the ProbLog engine when having to make multiple calls.
 
-/*
-make_jointaction(Role, Action, (Role, Action)).
-legal_actions(Role, Actions) :-
-    findall(Action, legal(Role, Action), Actions).
-
-permutation(Roles, ActionLists, Permutation):-
-    permutation_iter(Roles, ActionLists, [], Permutation).
-
-permutation_iter([], [],  Permutations, Permutations).
-permutation_iter([RolesH|RolesT], [ActionsH|ActionsT],  TempPermActions, Permutations):-
-    member(Action, ActionsH),
-    make_jointaction(RolesH, Action, NewPermAction),
-    permutation_iter(RolesT, ActionsT, [NewPermAction|TempPermActions], Permutations).
-
-legal_jointaction_permutation(Permutations):-
-    findall(Role, role(Role), Roles),
-    maplist(legal_actions, Roles, ActionsLists),
-    findall(Perm, permutation(Roles, ActionsLists, Perm), Permutations).
-*/
+% minmax_goals\3 returns the minimum and maximum goal values for a role.
+% This is used to normalize goal value between 1-100.
+minmax_goals(Role, Min, Max):-
+    findall(Goal, clause(goal(Role, Goal), _), Goals),
+    min_list(Goals, Min),
+    max_list(Goals, Max).
 
 
-% legal_jointaction\1 returns a random jointaction (one action per role) that is legal in the current state.
+% legal_jointaction\1 is true whenever JointAction contains one action per role that is legal in the current state.
+% e.g. (Tic Tac Toe): legal_jointaction([does(white, mark(1,1)), does(black, noop)])
 legal_jointaction(JointAction) :-
     findall(Role, role(Role), Roles),
-	legal_jointaction_iter(Roles, [], JointAction).
+    legal_jointaction_iter(Roles, [], JointAction).
 
-legal_jointaction_iter([], Temp, JointAction):-
-    reverse(Temp, JointAction).
+legal_jointaction_iter([], JointAction, JointAction).
 legal_jointaction_iter([RoleH|RoleT], Temp, JointAction) :-
     findall(Action, legal(RoleH, Action), Actions),
-    random_member(Action, Actions),
-    legal_jointaction_iter(RoleT, [Action|Temp], JointAction).
+    member(Action, Actions),
+    legal_jointaction_iter(RoleT, [does(RoleH,Action)|Temp], JointAction).
 
-legal_jointaction_pl(JointAction) :-
+% legal_jointaction_random\1 is used to generate a random JointAction. Usefull for simulations
+legal_jointaction_random(JointAction):-
     findall(Role, role(Role), Roles),
-    legal_jointaction_iterpl(Roles, [], JointAction).
+    legal_jointaction_random_iter(Roles, [], JointAction).
 
-legal_jointaction_iterpl([], JointAction, JointAction).
-legal_jointaction_iterpl([RoleH|RoleT], Temp, JointAction) :-
+legal_jointaction_random_iter([], JointAction, JointAction).
+legal_jointaction_random_iter([RoleH|RoleT], Temp, JointAction) :-
     findall(Action, legal(RoleH, Action), Actions),
     random_member(Action, Actions),
-    legal_jointaction_iterpl(RoleT, [does(RoleH,Action)|Temp], JointAction).
+    legal_jointaction_iter(RoleT, [does(RoleH,Action)|Temp], JointAction).
+
+% legal_jointaction_perm\1 is true whenever JointActions is equal to the list of all legal jointactions in the current state.
+legal_jointaction_perm(JointActions):-
+    findall(JA, legal_jointaction(JA), JointActions).
 
 
-% simulate\2 simulates a random playthrough from the current state until a terminal state is reached.
+% simulate\3 simulates a random playthrough from the current state until a terminal state is reached.
 % It then finds the goal value for the given role in that terminal state.
 simulate(State, Role, Value) :-
 	maplist(assertz, State),
@@ -88,7 +79,7 @@ simulate(State, Role, Value) :-
     	goal(Role, Value),
         maplist(retract, State)
     ;
-    	legal_jointaction_pl(JointAction),
+    	legal_jointaction_random(JointAction),
         maplist(assertz, JointAction),
     	findall(S, next(S),NextState),
         maplist(retract, State),
@@ -96,6 +87,7 @@ simulate(State, Role, Value) :-
         simulate(NextState, Role, Value)
     ).
 
+% simulate\4 simulates multiple random playthroughs from a given state and sums up the total score for the given role.
 simulate(State, Role, Total, Rounds) :-
     simulate_iter(State, Role, 0, Total, Rounds).
 
@@ -107,9 +99,30 @@ simulate_iter(State, Role, Temp, Total, Rounds):-
     simulate_iter(State, Role, NewTemp, Total, NewRounds).
 
 
-% minmax_goals\3 returns the minimum and maximum goal values for a role.
-% This is used to normalize goal value between 1-100.
-minmax_goals(Role, Min, Max):-
-    findall(Goal, clause(goal(Role, Goal), _), Goals),
-    min_list(Goals, Min),
-    max_list(Goals, Max).
+% facts_from_percepts\3 is used to generate all new facts that are inferred from the given percepts.
+% these can then be used to determine legal actions from other roles.
+facts_from_percepts(Role, Percepts, Facts):-
+    facts_from_percepts(Role, Percepts, [], Facts).
+
+facts_from_percepts(_, [], Facts, Facts).
+facts_from_percepts(Role, [PerceptH|PerceptT], TempFacts, Facts):-
+    facts_from_clause(sees(candidate, PerceptH), NewFacts),
+    append(NewFacts, TempFacts, NewTempFacts),
+    facts_from_percepts(Role, PerceptT, NewTempFacts, Facts).
+
+facts_from_clause(Head, []):-
+    clause(Head, Body),
+    Body == true, !.
+facts_from_clause(Head, Facts):-
+	clause(Head, Body),
+	facts_from_clause(Body, [], Facts),!.
+facts_from_clause(Head, Head).
+
+facts_from_clause((BodyH, BodyT), TempFacts, Facts):-
+    facts_from_clause(BodyH, NewFacts),
+    (is_list(NewFacts) ->
+    	append(NewFacts, TempFacts, NewTempFacts)
+    ;
+    	NewTempFacts = [NewFacts|TempFacts]
+    ),
+    facts_from_clause(BodyT, NewTempFacts, Facts).

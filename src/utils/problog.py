@@ -1,13 +1,14 @@
 from problog.engine import DefaultEngine
 from problog.program import PrologString
-from problog.logic import term2list, Var
+from problog.logic import Var
 from utils.gdl import gdlstring2problogstring, read_rules, problogterms2problogstring
 
 
 class ProblogEngine:
     def __init__(self, gdl_rules):
         self.engine = DefaultEngine()
-        self.base_string = '\n'.join([gdlstring2problogstring(gdl_rules), read_rules('utils/problog.pl', cmt_token='%')])
+        self.base_string = '\n'.join([gdlstring2problogstring(gdl_rules),
+                                      read_rules('src/utils/problog.pl', cmt_token='%')])
         self.base_db = self.engine.prepare(PrologString(self.base_string))
 
     def query(self, query, state=None, return_bool=False, backend=None):

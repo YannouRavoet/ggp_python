@@ -59,29 +59,38 @@ class Message:
             return Message(MessageType.DONE)
         elif message.startswith("start"):
             m = re.match(r"start\((\w*), (\w*), ([\w\s|\\,?()\[\]{}<=+]*), ([0-9]*), ([0-9]*)\)", message)
-            return Message(MessageType.START,
-                           args=[m.group(1), Term(m.group(2)), m.group(3), int(m.group(4)), int(m.group(5))])
+            matchID = m.group(1)
+            role = Term(m.group(2))
+            rules = m.group(3)
+            startclock = int(m.group(4))
+            playclock = int(m.group(5))
+            return Message(MessageType.START, args=[matchID, role, rules, startclock, playclock])
         elif message.startswith("play"):
             m = re.match(r"play\((\w*), (\[.*])\)", message)
             if m is not None:
-                return Message(MessageType.PLAY,
-                               args=[m.group(1), term2list(Term.from_string(m.group(2)))])
+                matchID = m.group(1)
+                jointaction = term2list(Term.from_string(m.group(2)))
+                return Message(MessageType.PLAY, args=[matchID, jointaction])
             else:
                 m = re.match(r"play\((\w*), (.*), (\[.*])\)", message)
-                return Message(MessageType.PLAY_II,
-                               args=[m.group(1), Term(m.group(2)), term2list(Term.from_string(m.group(3)))])
+                matchID = m.group(1)
+                action = Term(m.group(2)) if m.group(2) != "None" else None
+                percepts = term2list(Term.from_string(m.group(3)))
+                return Message(MessageType.PLAY_II, args=[matchID, action, percepts])
         elif message.startswith("stop"):
             m = re.match(r"stop\((\w*), (\[.*])\)", message)
             if m is not None:
-                return Message(MessageType.STOP,
-                               args=[m.group(1), term2list(Term.from_string(m.group(2)))])
+                matchID = m.group(1)
+                jointaction = term2list(Term.from_string(m.group(2)))
+                return Message(MessageType.STOP, args=[matchID, jointaction])
             else:
                 m = re.match(r"stop\((\w*), (.*), (\[.*])\)", message)
-                return Message(MessageType.STOP_II,
-                               args=[m.group(1), Term(m.group(2)), term2list(Term.from_string(m.group(3)))])
+                matchID = m.group(1)
+                action = Term(m.group(2))
+                percepts = term2list(Term.from_string(m.group(3)))
+                return Message(MessageType.STOP_II, args=[matchID, action, percepts])
         else:
-            return Message(MessageType.ACTION,
-                           args=[Term.from_string(message)])
+            return Message(MessageType.ACTION, args=[Term.from_string(message)])
 
 
 class MessageHandler(BaseHTTPRequestHandler):
@@ -90,7 +99,7 @@ class MessageHandler(BaseHTTPRequestHandler):
             rcv_time = time.time()
             length = int(self.headers['content-length'])
             msg = self.rfile.read(length).decode('unicode_escape')
-            print(f"<= {msg}")
+            print(f"<= {repr(msg)}")
             msg = Message.parse(msg)
             response = self.server.handle_message(msg, rcv_time)
             if response is not None:
@@ -107,7 +116,7 @@ class MessageHandler(BaseHTTPRequestHandler):
             self.send_header('Content-length', str(len(text)))
             self.end_headers()
             self.wfile.write(text.encode('utf-8'))
-            print(f"=> {text}")
+            print(f"=> {repr(text)}")
 
     def log_message(self, format, *args):
         """Overrides default log printing to keep from crowding the output console."""
