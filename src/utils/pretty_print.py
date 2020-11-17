@@ -68,7 +68,7 @@ class PrettyPrinterFactory:
 
 class PrettyPrinter:
     def print_state(self, state):
-        print(state)
+        print(state.sort())
 
 
 class BaseBoardPrinter(PrettyPrinter):

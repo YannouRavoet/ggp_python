@@ -2,7 +2,7 @@ import time
 from abc import ABC, abstractmethod
 from http.server import HTTPServer
 from utils.clocked_function import ClockedFunction
-from utils.ggp import Simulator, JointAction
+from utils.ggp import Simulator, JointAction, Action
 from utils.match_info import MatchInfo
 from utils.msg import MessageType, MessageHandler, Message
 
@@ -49,7 +49,8 @@ class GamePlayer(HTTPServer, ABC):
     def handle_play(self, matchID, actions, *args, **kwargs):
         self.set_reply_deadline(self.matchInfo.playclock)
         if len(actions) != 0:
-            actions = JointAction(self.simulator.player_roles(), actions)
+            actions = JointAction([Action(role, action)
+                                   for role, action in zip(self.simulator.player_roles(), actions)])
 
         timed_play = ClockedFunction(self.clock_left(), self.player_play)
         action = timed_play(actions)
@@ -57,7 +58,8 @@ class GamePlayer(HTTPServer, ABC):
 
     def handle_stop(self, matchID, actions, *args, **kwargs):
         self.set_reply_deadline(self.matchInfo.playclock)
-        actions = JointAction(self.simulator.player_roles(), actions)
+        actions = JointAction([Action(role, action)
+                               for role, action in zip(self.simulator.player_roles(), actions)])
         timed_stop = ClockedFunction(self.clock_left(), self.player_stop)
         goal_value = timed_stop(actions)
         self.matchInfo.add_result(self.role, goal_value)

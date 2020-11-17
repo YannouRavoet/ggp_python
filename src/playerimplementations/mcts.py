@@ -84,7 +84,7 @@ class MCTSPlayer(GamePlayer):
 
         # MCTS FROM CURRENT STATE
         loops = 0
-        rounds_per_loop = 1
+        rounds_per_loop = 100
         while True:
             try:
                 node = self.select(self.root_node)
@@ -97,7 +97,7 @@ class MCTSPlayer(GamePlayer):
                 print(f'ran {loops} MCTS loops')
                 self.root_node.print(self.expl_bias, last_level=1)
                 best_child = max(self.root_node.explored_children(), key=lambda c: c.AVG())
-                return best_child.jointaction.actions[self.role]
+                return best_child.jointaction.get_action(self.role)
 
     def player_stop(self, *args, **kwargs):
         jointaction = args[0]

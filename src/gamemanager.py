@@ -8,7 +8,7 @@ from http.client import HTTPConnection
 
 from utils.gdl import read_rules
 from utils.msg import MessageType, MessageHandler, Message
-from utils.ggp import Simulator, JointAction
+from utils.ggp import Simulator, JointAction, Action
 from utils.match_info import GameType, MatchInfo
 from utils.pretty_print import PrettyPrinterFactory
 
@@ -21,6 +21,9 @@ class Player:
         self.role = None
         self.action = None
         self.percepts = list()
+
+    def set_action(self, action_term):
+        self.action = Action(self.role, action_term)
 
 
 class Match(object):
@@ -42,9 +45,9 @@ class Match(object):
     def jointaction(self):
         jointaction = JointAction()
         for player in self.players:
-            jointaction.set_move(player.role, player.action)
+            jointaction.add_action(player.action)
         if self.has_random():
-            jointaction.set_move(self.random.role, self.random.action)
+            jointaction.add_action(self.random.action)
         return jointaction
 
     def check_legality_of_player_actions(self):
@@ -66,7 +69,7 @@ class Match(object):
 
     def set_percepts(self):
         for pl in self.players:
-            pl.percepts = self.simulator.percepts(self.state, pl.role, self.jointaction())
+            pl.percepts = self.simulator.percepts(self.state, self.jointaction(), pl.role)
 
 
 class GameManager(HTTPServer):
@@ -115,7 +118,7 @@ class GameManager(HTTPServer):
         else:
             raise NotImplementedError
         response_msg = self.send_message(player, msg)
-        player.action = response_msg.args[0]
+        player.set_action(response_msg.args[0])
 
     def send_stop(self, matchID, player):
         if self.matches[matchID].type == GameType.GDL:

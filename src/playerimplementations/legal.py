@@ -12,10 +12,11 @@ class LegalPlayer(GamePlayer):
 
     def player_play(self, *args, **kwargs):
         jointaction = args[0]
-        self.state = self.simulator.next_state(jointaction)
+        if len(jointaction) > 0:
+            self.state = self.simulator.next_state(self.state, jointaction)
         return self.simulator.legal_actions(self.state, self.role)[0]
 
     def player_stop(self, *args, **kwargs):
         jointaction = args[0]
-        self.state = self.simulator.next_state(jointaction)
+        self.state = self.simulator.next_state(self.state, jointaction)
         return self.simulator.goal(self.state, self.role)

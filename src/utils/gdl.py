@@ -81,9 +81,7 @@ class GDLtoProbLogParser(GDLParser):
             return Clause(head, body)
         else:
             args = [Var(arg) for arg in args]
-            if name == 'or':
-                return Or(args[0], args[1])
-            elif name == 'not':
+            if name == 'not':
                 return Not('\+', args[0])
             elif name == 'true':
                 return args[0]

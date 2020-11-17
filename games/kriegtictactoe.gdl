@@ -81,16 +81,16 @@
     (<= (next (cell ?m ?n x))
       (does white (mark ?m ?n))
       (true (cell ?m ?n b))
-      (does black (mark ?j ?k))
-      (or (distinct ?m ?j) (distinct ?n ?k)))
+      (or (distinct ?m ?j) (distinct ?n ?k))
+      (does black (mark ?j ?k)))
 
 ;;; black is successful in marking a blank cell
 ;;; when white moves in a different column or row
     (<= (next (cell ?m ?n o))
       (does black (mark ?m ?n))
       (true (cell ?m ?n b))
-      (does white (mark ?j ?k))
-      (or (distinct ?m ?j) (distinct ?n ?k)))
+      (or (distinct ?m ?j) (distinct ?n ?k))
+      (does white (mark ?j ?k)))
 
 
 ;;; if both players aim at the same cell, then that cell
