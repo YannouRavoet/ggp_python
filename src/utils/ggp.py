@@ -1,5 +1,6 @@
 import random
 from copy import deepcopy
+from orderedset import OrderedSet
 from utils.match_info import GameType
 from utils.problog import ProblogEngine
 from problog.logic import Term, Var, list2term, term2list, Constant
@@ -53,7 +54,7 @@ class Simulator(object):
     def legal_actions(self, state, role):
         if not self.terminal(state):
             results = self.engine.query(query=Term('legal_pl', *[state.to_term(), role, Var('Actions')]),
-                                          backend="swipl")
+                                        backend="swipl")
             return [Action.from_term(action_term) for action_term in results]
         return []  # legality of action does not depend on terminality of state in most GDL desriptions
 
@@ -81,14 +82,15 @@ class Simulator(object):
     def simulate(self, state, role, rounds=1, norm=True):
         goal = self.engine.query(query=Term('simulate', *[state.to_term(), role, Var('Value'), Constant(rounds)]),
                                  backend='swipl')
+        # TODO: Find out why this sometimes happens
         if len(goal) > 0:
             return self._goalnorm[role](int(goal[0])) if norm else int(goal[0])
-        return 0  # HAPPENS IF SIMULATION IS BROKEN OFF DUE TO CLOCKOVEREXCEPTION
+        print("simulation failed")
+        return 0
 
     """""""""""
        GDL-II
     """""""""""
-
     def random(self):
         class Environment:
             def __init__(self):
@@ -181,7 +183,7 @@ class JointAction:
     """Represents a move for each role in the game."""
 
     def __init__(self, actions=None):
-        self.actions = set(actions) if actions is not None else set()
+        self.actions = OrderedSet(actions) if actions is not None else OrderedSet()
 
     @classmethod
     def from_term(cls, term):
