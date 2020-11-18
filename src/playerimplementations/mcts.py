@@ -1,6 +1,6 @@
+import stopit
 from math import sqrt, log
 from gameplayer import GamePlayer
-from utils.clocked_function import ClockOverException
 
 
 class MCTSPlayer(GamePlayer):
@@ -75,9 +75,11 @@ class MCTSPlayer(GamePlayer):
         child_jointactions = self.simulator.legal_jointaction_permutations(state)
         return self.MCTSNode(parent, jointaction, state, child_jointactions)
 
+    @stopit.threading_timeoutable()
     def player_start(self):
         self.root_node = self.make_node(None, None, self.simulator.initial_state())
 
+    @stopit.threading_timeoutable()
     def player_play(self, *args, **kwargs):
         jointaction = args[0]
         self.update_root_node(jointaction)
@@ -92,13 +94,14 @@ class MCTSPlayer(GamePlayer):
                 goal_value = self.simulate(node, rounds=rounds_per_loop)
                 self.backprop(node, goal_value, visits=rounds_per_loop)
                 loops += rounds_per_loop
-            except ClockOverException:
+            except stopit.TimeoutException:
                 self.simulator.engine.clear_stack()
                 print(f'ran {loops} MCTS loops')
                 self.root_node.print(self.expl_bias, last_level=1)
                 best_child = max(self.root_node.explored_children(), key=lambda c: c.AVG())
                 return best_child.jointaction.get_action(self.role)
 
+    @stopit.threading_timeoutable()
     def player_stop(self, *args, **kwargs):
         jointaction = args[0]
         self.update_root_node(jointaction)
@@ -118,6 +121,7 @@ class MCTSPlayer(GamePlayer):
     # PHASE 1: Select best node to expand with UCB1 starting from a given node
     def select(self, node):
         while not node.has_unexplored_children() and not node.is_leaf():
+            # TODO: In case of UCB1 ties: pick random choice instead of first
             best_jointaction = max(node.children, key=lambda ja: node.children[ja].UCB1(self.expl_bias))
             node = node.get_child(best_jointaction)
         return node

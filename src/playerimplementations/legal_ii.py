@@ -1,3 +1,5 @@
+import stopit
+
 from gameplayer import GamePlayerII
 from utils.ggp import Action, Percepts
 
@@ -10,9 +12,11 @@ class LegalPlayerII(GamePlayerII):
         self.action_hist = list()
         self.percept_hist = list()
 
+    @stopit.threading_timeoutable()
     def player_start(self):
         self.state = self.simulator.initial_state()
 
+    @stopit.threading_timeoutable()
     def player_play(self, *args, **kwargs):
         if args[0] is not None:
             self.action_hist.append(Action(self.role, args[0]))
@@ -24,6 +28,7 @@ class LegalPlayerII(GamePlayerII):
                 self.state = self.simulator.create_valid_state(self.role, self.action_hist, self.percept_hist)
         return self.simulator.legal_actions(self.state, self.role)[0]
 
+    @stopit.threading_timeoutable()
     def player_stop(self, *args, **kwargs):
         self.action_hist.append(Action(self.role, args[0]))
         self.percept_hist.append(Percepts(self.role, args[1]))

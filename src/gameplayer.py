@@ -1,7 +1,7 @@
 import time
+import stopit
 from abc import ABC, abstractmethod
 from http.server import HTTPServer
-from utils.clocked_function import ClockedFunction
 from utils.ggp import Simulator, JointAction, Action
 from utils.match_info import MatchInfo
 from utils.msg import MessageType, MessageHandler, Message
@@ -42,8 +42,7 @@ class GamePlayer(HTTPServer, ABC):
         self.simulator = Simulator(gdl_rules)
         self.role = role
 
-        timed_start = ClockedFunction(self.clock_left(), self.player_start)
-        timed_start()
+        self.player_start(timeout=self.clock_left())
         return Message(MessageType.READY)
 
     def handle_play(self, matchID, actions, *args, **kwargs):
@@ -52,16 +51,14 @@ class GamePlayer(HTTPServer, ABC):
             actions = JointAction([Action(role, action)
                                    for role, action in zip(self.simulator.player_roles(), actions)])
 
-        timed_play = ClockedFunction(self.clock_left(), self.player_play)
-        action = timed_play(actions)
+        action = self.player_play(actions, timeout=self.clock_left())
         return Message(MessageType.ACTION, [action])
 
     def handle_stop(self, matchID, actions, *args, **kwargs):
         self.set_reply_deadline(self.matchInfo.playclock)
         actions = JointAction([Action(role, action)
                                for role, action in zip(self.simulator.player_roles(), actions)])
-        timed_stop = ClockedFunction(self.clock_left(), self.player_stop)
-        goal_value = timed_stop(actions)
+        goal_value = self.player_stop(actions, timeout=self.clock_left())
         self.matchInfo.add_result(self.role, goal_value)
         self.__init__(self.server_port)
         return Message(MessageType.DONE)
@@ -70,14 +67,17 @@ class GamePlayer(HTTPServer, ABC):
     PLAYER IMPLEMENTATIONS
     """""""""""""""""""""""
     @abstractmethod
+    @stopit.threading_timeoutable()
     def player_start(self):
         raise NotImplementedError
 
     @abstractmethod
+    @stopit.threading_timeoutable()
     def player_play(self, *args, **kwargs):
         raise NotImplementedError
 
     @abstractmethod
+    @stopit.threading_timeoutable()
     def player_stop(self, *args, **kwargs):
         raise NotImplementedError
 
@@ -94,14 +94,12 @@ class GamePlayer(HTTPServer, ABC):
 class GamePlayerII(GamePlayer, ABC):
     def handle_play(self, matchID, action, percepts=None, *args, **kwargs):
         self.set_reply_deadline(self.matchInfo.playclock)
-        search_function = ClockedFunction(self.clock_left(), self.player_play)
-        action = search_function(action, percepts)
+        action = self.player_play(action, percepts, timeout=self.clock_left())
         return Message(MessageType.ACTION, [action])
 
     def handle_stop(self, matchID, action, percepts=None, *args, **kwargs):
         self.set_reply_deadline(self.matchInfo.playclock)
-        timed_stop = ClockedFunction(self.clock_left(), self.player_stop)
-        goal_value = timed_stop(action, percepts)
+        goal_value = self.player_stop(action, percepts, timeout=self.clock_left())
         self.matchInfo.add_result(self.role, goal_value)
         self.__init__(self.server_port)
         return Message(MessageType.DONE)

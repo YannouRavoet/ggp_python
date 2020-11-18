@@ -1,3 +1,5 @@
+import stopit
+
 from gameplayer import GamePlayer
 
 
@@ -7,15 +9,18 @@ class LegalPlayer(GamePlayer):
         super().__init__(port)
         self.state = None
 
+    @stopit.threading_timeoutable()
     def player_start(self):
         self.state = self.simulator.initial_state()
 
+    @stopit.threading_timeoutable()
     def player_play(self, *args, **kwargs):
         jointaction = args[0]
         if len(jointaction) > 0:
             self.state = self.simulator.next_state(self.state, jointaction)
         return self.simulator.legal_actions(self.state, self.role)[0]
 
+    @stopit.threading_timeoutable()
     def player_stop(self, *args, **kwargs):
         jointaction = args[0]
         self.state = self.simulator.next_state(self.state, jointaction)

@@ -1,7 +1,5 @@
 import random
 from copy import deepcopy
-
-from utils.clocked_function import ClockOverException
 from utils.match_info import GameType
 from utils.problog import ProblogEngine
 from problog.logic import Term, Var, list2term, term2list, Constant
