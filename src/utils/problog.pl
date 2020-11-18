@@ -5,6 +5,7 @@ distinct(X,Y) :-
 or(X,_):-X.
 or(_,Y):-Y.
 
+
 % tuple_2_list/2 converts a tuple to a list
 tuple_2_list(Tuple, List):-
     tuple_2_list(Tuple, [], List).
@@ -155,13 +156,13 @@ create_valid_state(Role, [ActionH|ActionT], [PerceptH|PerceptT], TempState, Stat
 
 %helper functions to findall facts of a certain kind.
 roles_pl(Roles):-
-    findall(R, role(R), Roles).
+    setof(R, role(R), Roles).
 init_pl(State):-
-    findall(S, init(S), State).
+    setof(S, init(S), State).
 next_pl(State, JointAction, NextState):-
     maplist(assertz, State),
     maplist(assertz, JointAction),
-    findall(S,next(S), NextState),
+    setof(S,next(S), NextState),
     maplist(retract, State),
     maplist(retract, JointAction).
 legal_pl(State, Role, Action):-
@@ -169,12 +170,12 @@ legal_pl(State, Role, Action):-
     member(Action, Actions).
 legals_pl(State, Role, Actions):-
     maplist(assertz, State),
-    findall(does(Role,A), legal(Role,A), Actions),
+    setof(does(Role,A), legal(Role,A), Actions),
     maplist(retract, State).
 sees_pl(State, JointAction, Role, Percepts):-
     maplist(assertz, State),
     maplist(assertz, JointAction),
-    findall(sees(Role,P), sees(Role,P), Percepts),
+    setof(sees(Role,P), sees(Role,P), Percepts),
     maplist(retract, State),
     maplist(retract, JointAction).
 terminal_pl(State):-

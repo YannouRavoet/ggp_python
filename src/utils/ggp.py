@@ -80,13 +80,9 @@ class Simulator(object):
         return State.from_term(facts)
 
     def simulate(self, state, role, rounds=1, norm=True):
-        goal = self.engine.query(query=Term('simulate', *[state.to_term(), role, Var('Value'), Constant(rounds)]),
+        [goal] = self.engine.query(query=Term('simulate', *[state.to_term(), role, Var('Value'), Constant(rounds)]),
                                  backend='swipl')
-        # TODO: Find out why this sometimes happens
-        if len(goal) > 0:
-            return self._goalnorm[role](int(goal[0])) if norm else int(goal[0])
-        print("simulation failed")
-        return 0
+        return self._goalnorm[role](int(goal)) if norm else int(goal)
 
     """""""""""
        GDL-II

@@ -1,18 +1,14 @@
-role(white).
-role(black).
-role(random).
+role(xplayer).
+role(oplayer).
 index(1).
 index(2).
 index(3).
-base(cell(_m,_n,x)) :- index(_m), index(_n).
-base(cell(_m,_n,o)) :- index(_m), index(_n).
-base(cell(_m,_n,b)) :- index(_m), index(_n).
-base(tried(white,_m,_n)) :- index(_m), index(_n).
-base(tried(black,_m,_n)) :- index(_m), index(_n).
-input(white,mark(_m,_n)) :- index(_m), index(_n).
-input(black,mark(_m,_n)) :- index(_m), index(_n).
-input(random,tiebreak(x)).
-input(random,tiebreak(o)).
+base(cell(_x,_y,b)) :- index(_x), index(_y).
+base(cell(_x,_y,x)) :- index(_x), index(_y).
+base(cell(_x,_y,o)) :- index(_x), index(_y).
+base(control(_p)) :- role(_p).
+input(_p,mark(_x,_y)) :- index(_x), index(_y), role(_p).
+input(_p,noop) :- role(_p).
 init(cell(1,1,b)).
 init(cell(1,2,b)).
 init(cell(1,3,b)).
@@ -22,33 +18,13 @@ init(cell(2,3,b)).
 init(cell(3,1,b)).
 init(cell(3,2,b)).
 init(cell(3,3,b)).
-legal(white,mark(_m,_n)) :- index(_m), index(_n), \+tried(white,_m,_n).
-legal(black,mark(_m,_n)) :- index(_m), index(_n), \+tried(black,_m,_n).
-legal(random,tiebreak(x)).
-legal(random,tiebreak(o)).
-next(tried(_p,_m,_n)) :- does(_p,mark(_m,_n)).
-next(tried(_r,_m,_n)) :- tried(_r,_m,_n).
-next(cell(_m,_n,x)) :- does(white,mark(_m,_n)), cell(_m,_n,b), does(black,mark(_j,_k)), or(distinct(_m,_j),distinct(_n,_k)).
-next(cell(_m,_n,o)) :- does(black,mark(_m,_n)), cell(_m,_n,b), does(white,mark(_j,_k)), or(distinct(_m,_j),distinct(_n,_k)).
-next(cell(_m,_n,_w)) :- cell(_m,_n,b), does(black,mark(_m,_n)), does(white,mark(_m,_n)), does(random,tiebreak(_w)).
-next(cell(_m,_n,x)) :- cell(_m,_n,x).
-next(cell(_m,_n,o)) :- cell(_m,_n,o).
-next(cell(_m,_n,b)) :- cell(_m,_n,b), \+marked(_m,_n).
-marked(_m,_n) :- does(_r,mark(_m,_n)).
-sees(_r,ok) :- does(_r,mark(_m,_n)), cell(_m,_n,b), does(_s,mark(_j,_k)), or(distinct(_m,_j),distinct(_n,_k)).
-sees(white,ok) :- does(white,mark(_m,_n)), cell(_m,_n,b), does(random,tiebreak(x)).
-sees(black,ok) :- does(black,mark(_m,_n)), cell(_m,_n,b), does(random,tiebreak(o)).
-goal(white,100) :- line(x), \+line(o).
-goal(white,50) :- line(x), line(o).
-goal(white,50) :- \+open, \+line(x), \+line(o).
-goal(white,0) :- line(o), \+line(x).
-goal(black,100) :- line(o), \+line(x).
-goal(black,50) :- line(x), line(o).
-goal(black,50) :- \+open, \+line(x), \+line(o).
-goal(black,0) :- line(x), \+line(o).
-terminal :- line(x).
-terminal :- line(o).
-terminal :- \+open.
+init(control(xplayer)).
+next(cell(_m,_n,x)) :- does(xplayer,mark(_m,_n)), cell(_m,_n,b).
+next(cell(_m,_n,o)) :- does(oplayer,mark(_m,_n)), cell(_m,_n,b).
+next(cell(_m,_n,_w)) :- cell(_m,_n,_w), distinct(_w,b).
+next(cell(_m,_n,b)) :- does(_w,mark(_j,_k)), cell(_m,_n,b), or(distinct(_m,_j),distinct(_n,_k)).
+next(control(xplayer)) :- control(oplayer).
+next(control(oplayer)) :- control(xplayer).
 row(_m,_x) :- cell(_m,1,_x), cell(_m,2,_x), cell(_m,3,_x).
 column(_n,_x) :- cell(1,_n,_x), cell(2,_n,_x), cell(3,_n,_x).
 diagonal(_x) :- cell(1,1,_x), cell(2,2,_x), cell(3,3,_x).
@@ -57,7 +33,18 @@ line(_x) :- row(_m,_x).
 line(_x) :- column(_m,_x).
 line(_x) :- diagonal(_x).
 open :- cell(_m,_n,b).
-tried(_r,_m,_n) :- fail.
+legal(_w,mark(_x,_y)) :- cell(_x,_y,b), control(_w).
+legal(xplayer,noop) :- control(oplayer).
+legal(oplayer,noop) :- control(xplayer).
+goal(xplayer,100) :- line(x).
+goal(xplayer,50) :- \+line(x), \+line(o), \+open.
+goal(xplayer,0) :- line(o).
+goal(oplayer,100) :- line(o).
+goal(oplayer,50) :- \+line(x), \+line(o), \+open.
+goal(oplayer,0) :- line(x).
+terminal :- line(x).
+terminal :- line(o).
+terminal :- \+open.
 
 % distinct/2 simply returns whether or not X and Y are different.
 distinct(X,Y) :-
@@ -221,7 +208,8 @@ init_pl(State):-
 next_pl(State, JointAction, NextState):-
     maplist(assertz, State),
     maplist(assertz, JointAction),
-    findall(S,next(S), NextState),
+    findall(S,next(S), NextStateL),
+    list_to_set(NextStateL, NextState),
     maplist(retract, State),
     maplist(retract, JointAction).
 legal_pl(State, Role, Action):-
