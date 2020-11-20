@@ -57,7 +57,7 @@ class Grid:
 class PrettyPrinterFactory:
     @staticmethod
     def make_printer(gamefile):
-        if gamefile == 'tictactoe.gdl':
+        if gamefile == 'tictactoe.gdl' or gamefile=='kriegtictactoe_v2.gdl':
             return BaseBoardPrinter(rows=3, cols=3)
         if gamefile == 'connectfour.gdl':
             return ConnectFourPrinter(rows=6, cols=8, row_div_mod=-1, col_div_mod=1)
@@ -78,14 +78,14 @@ class BaseBoardPrinter(PrettyPrinter):
 
     def print_state(self, state):
         for fact in state.facts:
-            if fact.arity == 3 and str(fact.args[2]) != self.empty_cell_char:
+            if fact.functor == "cell" and str(fact.args[2]) != self.empty_cell_char:
                 self.process_state_cell(fact)
         self.grid.print()
 
     def process_state_cell(self, fact):
         self.grid.set_cellvalue(int(fact.args[0]),
                                 int(fact.args[1]),
-                                str(fact.args[2]))
+                                str(fact.args[2])[0])
 
 
 class ConnectFourPrinter(BaseBoardPrinter):

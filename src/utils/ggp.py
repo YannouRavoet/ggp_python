@@ -34,6 +34,11 @@ class Simulator(object):
             return GameType.GDL_II
         return GameType.GDL
 
+    def actions_2_jointaction(self, actions):
+        roles = self.player_roles()
+        assert (len(actions) == len(roles))
+        return JointAction([Action(role, action) for role, action in zip(roles, actions)])
+
     """""""""""
         GDL
     """""""""""
@@ -58,12 +63,10 @@ class Simulator(object):
             return [Action.from_term(action_term) for action_term in results]
         return []  # legality of action does not depend on terminality of state in most GDL desriptions
 
-    def legal_jointaction_permutations(self, state):
-        [jointactions] = self.engine.query(
-            query=Term('legal_jointaction_perm', *[state.to_term(), Var('JointActions')]),
-            backend='swipl')
-        return [JointAction([Action.from_term(action) for action in action_list]) for action_list in
-                term2list(jointactions)]
+    def legal_jointactions(self, state):
+        jointactions = self.engine.query(query=Term('legal_jointaction', *[state.to_term(), Var('JointActions')]),
+                                         backend='swipl')
+        return [JointAction().from_term(jointaction) for jointaction in jointactions]
 
     def terminal(self, state):
         return self.engine.query(query=Term('terminal_pl', state.to_term()),
@@ -81,12 +84,13 @@ class Simulator(object):
 
     def simulate(self, state, role, rounds=1, norm=True):
         [goal] = self.engine.query(query=Term('simulate', *[state.to_term(), role, Var('Value'), Constant(rounds)]),
-                                 backend='swipl')
+                                   backend='swipl')
         return self._goalnorm[role](int(goal)) if norm else int(goal)
 
     """""""""""
        GDL-II
     """""""""""
+
     def random(self):
         class Environment:
             def __init__(self):
@@ -98,30 +102,42 @@ class Simulator(object):
         return None
 
     def percepts(self, state, jointaction, role):
-        [term] = self.engine.query(query=Term('sees_pl', *[state.to_term(), jointaction.to_term(), role, Var('Percepts')]),
-                                   backend="swipl")
+        [term] = self.engine.query(
+            query=Term('sees_pl', *[state.to_term(), jointaction.to_term(), role, Var('Percepts')]),
+            backend="swipl")
         if term != Term('[]'):
             return Percepts.from_term(term)
-        return Percepts(role, list())
+        return Percepts(role, list())  # no percepts
 
     def valid_state(self, state, percepts):
-        result = self.engine.query(query=Term('valid_state', *[state.to_term(), percepts.to_term()]),
-                                   backend="swipl", return_bool=True)
-        return result
+        if percepts is not None:
+            result = self.engine.query(query=Term('valid_state', *[state.to_term(), percepts.to_term()]),
+                                       backend="swipl", return_bool=True)
+            return result
+        return True
 
-    def create_valid_state(self, role, action_hist, percept_hist):
-        state_terms = self.engine.query(query=Term('create_valid_state', *[role,
-                                                                           list2term([a.to_term() for a in action_hist]),
-                                                                           list2term([p.to_term() for p in percept_hist]),
-                                                                           Var('State')]),
+    def create_valid_states(self, role, action_hist, percept_hist):
+        states = self.engine.query(query=Term('create_valid_state',
+                                                   *[role,
+                                                     list2term([a.to_term() for a in action_hist]),
+                                                     list2term([p.to_term() for p in percept_hist]), Var('State')]),
                                         backend="swipl")
-        return State.from_term(random.choice(state_terms))
+        return [State.from_term(s_term) for s_term in states]
 
-    def legal_jointaction_from_percepts(self, state, action, percepts):
+    def legal_jointactions_ii(self, state, action, percepts):
         jointactions = self.engine.query(query=Term('legal_jointaction_from_percepts',
-                                                    *[state.to_term(), action.to_term(), percepts.to_term(), Var('JointAction')]),
-                                         backend='swipl')
-        return JointAction.from_term(random.choice(jointactions))
+                                                        *[state.to_term(), action.to_term(), percepts.to_term(),
+                                                          Var('JointAction')]),
+                                             backend='swipl')
+        return [JointAction.from_term(ja_term) for ja_term in jointactions]
+
+    def update_states_ii(self, states, action, percepts):
+        [new_states] = self.engine.query(query=Term('update_valid_states', *[list2term([s.to_term() for s in states]),
+                                                                          action.to_term(),
+                                                                          percepts.to_term(),
+                                                                          Var('NewStates')]),
+                                       backend="swipl")
+        return [State(facts) for facts in term2list(new_states)]
 
 
 class State:

@@ -105,7 +105,7 @@ class GameManager(HTTPServer):
         msg = Message(MessageType.START,
                       args=[matchID,
                             player.role,
-                            self.matches[matchID].matchInfo.gdlrules,
+                            self.matches[matchID].matchInfo.gdl_rules,
                             self.matches[matchID].matchInfo.startclock,
                             self.matches[matchID].matchInfo.playclock])
         self.send_message(player, msg)
@@ -143,8 +143,9 @@ class GameManager(HTTPServer):
         for player in self.matches[matchID].players:
             threads[player].join()
 
-    def setup_match(self, game, players, startclock, playclock):
-        gdl_rules = read_rules(os.path.join('games', game))
+    def setup_match(self, game_file, players, startclock, playclock):
+        state_printer = PrettyPrinterFactory.make_printer(game_file)
+        gdl_rules = read_rules(os.path.join('games', game_file))
         simulator = Simulator(gdl_rules)
         roles = simulator.player_roles()
         assert (len(roles) == len(players))
@@ -152,7 +153,6 @@ class GameManager(HTTPServer):
             players[i].role = role
 
         matchID = ''.join(random.choices(string.ascii_lowercase + string.digits, k=5))
-        state_printer = PrettyPrinterFactory.make_printer(game)
         matchInfo = MatchInfo(matchID, gdl_rules, startclock, playclock)
         self.matches[matchID] = Match(matchInfo, simulator, players, state_printer)
         return matchID

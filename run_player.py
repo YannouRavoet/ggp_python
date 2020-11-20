@@ -1,14 +1,14 @@
 import sys
 sys.path.append("/home/yannou/git/ggp_problog/src")
 import argparse
-from playerimplementations import legal, random, mcts, legal_ii
-
+from playerimplementations import legal, random, mcts, legal_ii, random_ii
 
 playerclasses = {
     'legal': legal.LegalPlayer,
     'random': random.RandomPlayer,
     'mcts': mcts.MCTSPlayer,
-    'legal_ii': legal_ii.LegalPlayerII
+    'legal_ii': legal_ii.LegalPlayerII,
+    'random_ii': random_ii.RandomPlayerII
 }
 
 if __name__ == "__main__":

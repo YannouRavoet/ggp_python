@@ -7,9 +7,9 @@ class GameType(Enum):
 
 
 class MatchInfo(object):
-    def __init__(self, matchID, gdlrules, startclock, playclock):
+    def __init__(self, matchID, gdl_rules, startclock, playclock):
         self.matchID = matchID
-        self.gdlrules = gdlrules
+        self.gdl_rules = gdl_rules
         self.startclock = startclock
         self.playclock = playclock
         self.results = dict()

@@ -14,13 +14,14 @@ class GamePlayer(HTTPServer, ABC):
         self.simulator = None
         self.role = None
 
-        self.msg_time = None        # time at which last message was received
-        self.reply_buffer = 1       # nb seconds between ClockOverException and deadline of response
+        self.msg_time = None  # time at which last message was received
+        self.reply_buffer = 1  # nb seconds between ClockOverException and deadline of response
         self.reply_deadline = None  # time at which the manager needs an answer
 
     """""""""""
      MESSAGING
     """""""""""
+
     def handle_message(self, msg, rcvtime):
         self.msg_time = rcvtime
         if msg.type == MessageType.START:
@@ -47,17 +48,11 @@ class GamePlayer(HTTPServer, ABC):
 
     def handle_play(self, matchID, actions, *args, **kwargs):
         self.set_reply_deadline(self.matchInfo.playclock)
-        if len(actions) != 0:
-            actions = JointAction([Action(role, action)
-                                   for role, action in zip(self.simulator.player_roles(), actions)])
-
-        action = self.player_play(actions, timeout=self.clock_left())
+        action = self.player_play(len(actions) == 0, actions, timeout=self.clock_left())
         return Message(MessageType.ACTION, [action])
 
     def handle_stop(self, matchID, actions, *args, **kwargs):
         self.set_reply_deadline(self.matchInfo.playclock)
-        actions = JointAction([Action(role, action)
-                               for role, action in zip(self.simulator.player_roles(), actions)])
         goal_value = self.player_stop(actions, timeout=self.clock_left())
         self.matchInfo.add_result(self.role, goal_value)
         self.__init__(self.server_port)
@@ -66,6 +61,7 @@ class GamePlayer(HTTPServer, ABC):
     """""""""""""""""""""""
     PLAYER IMPLEMENTATIONS
     """""""""""""""""""""""
+
     @abstractmethod
     @stopit.threading_timeoutable()
     def player_start(self):
@@ -73,7 +69,7 @@ class GamePlayer(HTTPServer, ABC):
 
     @abstractmethod
     @stopit.threading_timeoutable()
-    def player_play(self, *args, **kwargs):
+    def player_play(self, first_round=False, *args, **kwargs):
         raise NotImplementedError
 
     @abstractmethod
@@ -84,6 +80,7 @@ class GamePlayer(HTTPServer, ABC):
     """""""""
       TIMERS
     """""""""
+
     def set_reply_deadline(self, clock_time):
         self.reply_deadline = self.msg_time + clock_time - self.reply_buffer
 
@@ -94,7 +91,7 @@ class GamePlayer(HTTPServer, ABC):
 class GamePlayerII(GamePlayer, ABC):
     def handle_play(self, matchID, action, percepts=None, *args, **kwargs):
         self.set_reply_deadline(self.matchInfo.playclock)
-        action = self.player_play(action, percepts, timeout=self.clock_left())
+        action = self.player_play(action is None, action, percepts, timeout=self.clock_left())
         return Message(MessageType.ACTION, [action])
 
     def handle_stop(self, matchID, action, percepts=None, *args, **kwargs):

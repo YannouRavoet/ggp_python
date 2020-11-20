@@ -1,7 +1,5 @@
-import random
-
 import stopit
-
+import random
 from gameplayer import GamePlayer
 
 
@@ -17,14 +15,15 @@ class RandomPlayer(GamePlayer):
         self.state = self.simulator.initial_state()
 
     @stopit.threading_timeoutable()
-    def player_play(self, *args, **kwargs):
-        jointaction = args[0]
-        if len(jointaction) > 0:
+    def player_play(self, first_round, *args, **kwargs):
+        if not first_round:
+            jointaction = self.simulator.actions_2_jointaction(args[0])
             self.state = self.simulator.next_state(self.state, jointaction)
         return random.choice(self.simulator.legal_actions(self.state, self.role))
 
     @stopit.threading_timeoutable()
     def player_stop(self, *args, **kwargs):
-        jointaction = args[0]
+        jointaction = self.simulator.actions_2_jointaction(args[0])
         self.state = self.simulator.next_state(self.state, jointaction)
         return self.simulator.goal(self.state, self.role)
+

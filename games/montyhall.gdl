@@ -52,8 +52,7 @@
         (does random (open_door ?d)))
     (<= (sees candidate (car ?d))
         (true (step 3))
-        (true (car ?d))
-        (next_chosen ?d))
+        (true (car ?d)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; NEXT Relations

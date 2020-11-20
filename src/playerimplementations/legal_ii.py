@@ -17,7 +17,7 @@ class LegalPlayerII(GamePlayerII):
         self.state = self.simulator.initial_state()
 
     @stopit.threading_timeoutable()
-    def player_play(self, *args, **kwargs):
+    def player_play(self, first_round, *args, **kwargs):
         if args[0] is not None:
             self.action_hist.append(Action(self.role, args[0]))
             self.percept_hist.append(Percepts(self.role, args[1]))
