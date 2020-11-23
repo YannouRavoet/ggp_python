@@ -109,35 +109,19 @@ class Simulator(object):
             return Percepts.from_term(term)
         return Percepts(role, list())  # no percepts
 
-    def valid_state(self, state, percepts):
-        if percepts is not None:
-            result = self.engine.query(query=Term('valid_state', *[state.to_term(), percepts.to_term()]),
-                                       backend="swipl", return_bool=True)
-            return result
-        return True
-
-    def create_valid_states(self, role, action_hist, percept_hist):
-        states = self.engine.query(query=Term('create_valid_state',
-                                                   *[role,
-                                                     list2term([a.to_term() for a in action_hist]),
-                                                     list2term([p.to_term() for p in percept_hist]), Var('State')]),
-                                        backend="swipl")
-        return [State.from_term(s_term) for s_term in states]
-
-    def legal_jointactions_ii(self, state, action, percepts):
-        jointactions = self.engine.query(query=Term('legal_jointaction_from_percepts',
-                                                        *[state.to_term(), action.to_term(), percepts.to_term(),
-                                                          Var('JointAction')]),
-                                             backend='swipl')
-        return [JointAction.from_term(ja_term) for ja_term in jointactions]
-
     def update_states_ii(self, states, action, percepts):
         [new_states] = self.engine.query(query=Term('update_valid_states', *[list2term([s.to_term() for s in states]),
-                                                                          action.to_term(),
-                                                                          percepts.to_term(),
-                                                                          Var('NewStates')]),
-                                       backend="swipl")
+                                                                             action.to_term(),
+                                                                             percepts.to_term(),
+                                                                             Var('NewStates')]),
+                                         backend="swipl")
         return [State(facts) for facts in term2list(new_states)]
+
+    def filter_terminal_states(self, states):
+        [terminal_states] = self.engine.query(query=Term('filter_terminals', *[list2term([s.to_term() for s in states]),
+                                                                               Var('NewStates')]),
+                                              backend="swipl")
+        return [State(facts) for facts in term2list(terminal_states)]
 
 
 class State:

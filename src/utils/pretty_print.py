@@ -31,10 +31,6 @@ class Grid:
         self.col_div_mod = col_div_mod
         self.row_divider = f'\n{"---" * self.cols}{"-" * ceil(self.rows / self.col_div_mod - 1) if self.col_div_mod is not None else ""}'
 
-        for r in range(1, self.rows + 1):
-            for c in range(1, self.cols + 1):
-                self.cells.append(self.GridCell(r, c, self.blank))
-
     def set_cellvalue(self, row, col, value):
         index = (row - 1) * self.cols + col - 1
         self.cells[index].value = value
@@ -52,6 +48,12 @@ class Grid:
             if cell.col != self.cols and cell.col % self.col_div_mod == 0:
                 print('|', end='')
         print("\n")
+
+    def empty(self):
+        self.cells.clear()
+        for r in range(1, self.rows + 1):
+            for c in range(1, self.cols + 1):
+                self.cells.append(self.GridCell(r, c, self.blank))
 
 
 class PrettyPrinterFactory:
@@ -77,6 +79,7 @@ class BaseBoardPrinter(PrettyPrinter):
         self.empty_cell_char = empty_cell_char
 
     def print_state(self, state):
+        self.grid.empty()
         for fact in state.facts:
             if fact.functor == "cell" and str(fact.args[2]) != self.empty_cell_char:
                 self.process_state_cell(fact)

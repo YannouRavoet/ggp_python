@@ -58,6 +58,16 @@ class GamePlayer(HTTPServer, ABC):
         self.__init__(self.server_port)
         return Message(MessageType.DONE)
 
+    """""""""
+      TIMERS
+    """""""""
+
+    def set_reply_deadline(self, clock_time):
+        self.reply_deadline = self.msg_time + clock_time - self.reply_buffer
+
+    def clock_left(self):
+        return self.reply_deadline - time.time()
+
     """""""""""""""""""""""
     PLAYER IMPLEMENTATIONS
     """""""""""""""""""""""
@@ -76,16 +86,6 @@ class GamePlayer(HTTPServer, ABC):
     @stopit.threading_timeoutable()
     def player_stop(self, *args, **kwargs):
         raise NotImplementedError
-
-    """""""""
-      TIMERS
-    """""""""
-
-    def set_reply_deadline(self, clock_time):
-        self.reply_deadline = self.msg_time + clock_time - self.reply_buffer
-
-    def clock_left(self):
-        return self.reply_deadline - time.time()
 
 
 class GamePlayerII(GamePlayer, ABC):

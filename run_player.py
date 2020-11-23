@@ -1,7 +1,7 @@
 import sys
 sys.path.append("/home/yannou/git/ggp_problog/src")
 import argparse
-from playerimplementations import legal, random, mcts, legal_ii, random_ii
+from players import legal, random, mcts, legal_ii, random_ii
 
 playerclasses = {
     'legal': legal.LegalPlayer,
