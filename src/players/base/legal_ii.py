@@ -1,7 +1,7 @@
 import stopit
 from gameplayer import GamePlayerII
-from utils.ggp import Action, Percepts
-from utils.pretty_print import PrettyPrinterFactory
+from utils.ggp.percepts import Percepts
+from utils.ggp.action import Action
 
 
 class LegalPlayerII(GamePlayerII):

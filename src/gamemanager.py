@@ -5,10 +5,13 @@ import string
 from threading import Thread
 from http.server import HTTPServer
 from http.client import HTTPConnection
-
 from utils.gdl import read_rules
-from utils.msg import MessageType, MessageHandler, Message
-from utils.ggp import Simulator, JointAction, Action
+from utils.messaging.message import Message
+from utils.messaging.message_type import MessageType
+from utils.messaging.message_handler import MessageHandler
+from utils.ggp.action import Action
+from utils.ggp.simulator import Simulator
+from utils.ggp.jointaction import JointAction
 from utils.match_info import GameType, MatchInfo
 from utils.pretty_print import PrettyPrinterFactory
 

@@ -1,8 +1,9 @@
-import random
-from copy import deepcopy
-from orderedset import OrderedSet
+from utils.ggp.action import Action
+from utils.ggp.jointaction import JointAction
+from utils.ggp.percepts import Percepts
+from utils.ggp.state import State
 from utils.match_info import GameType
-from utils.problog import ProblogEngine
+from utils.problog.problog import ProblogEngine
 from problog.logic import Term, Var, list2term, term2list, Constant
 
 
@@ -12,14 +13,12 @@ class Simulator(object):
     def __init__(self, gdl_rules):
         self.gdl_rules = gdl_rules
         self.engine = ProblogEngine(gdl_rules)
+        self._goalnorm = self._create_goalnorms()  # dict<Role, NormFunction> used to normalize goal values
 
-        self._goalnorm = self._get_goalnorms()  # dict<Role, NormFunction> used to normalize goal values
-
-    def _get_goalnorms(self):
-        def goalnorm(mn, mx):
+    def _create_goalnorms(self):
+        def goalnorm(mini, maxi):
             def norm(goal):
-                return (goal - mn) / (mx - mn)
-
+                return (goal - mini) / (maxi - mini)
             return norm
 
         goalnorms = dict()
@@ -35,6 +34,12 @@ class Simulator(object):
         return GameType.GDL
 
     def actions_2_jointaction(self, actions):
+        """
+        Turns list of actions into a list of JointActions by assigning a role to each action.
+        The roles are assigned in the order of self.player_roles().
+        :param actions: List of actions to assign roles to
+        :return: List of JointActions
+        """
         roles = self.player_roles()
         assert (len(actions) == len(roles))
         return JointAction([Action(role, action) for role, action in zip(roles, actions)])
@@ -83,6 +88,16 @@ class Simulator(object):
         return State.from_term(facts)
 
     def simulate(self, state, role, rounds=1, norm=True):
+        """
+        Simulates the game from the given state on, selecting a random JointAction at each consecutive state.
+        When a terminal state is reached, the goal value of 'role' is returned. If 'rounds' > 1, it sums up the goal
+        values and returns this sum.
+        :param state: Starting State of the simulation
+        :param role: Role to calculate goal values from
+        :param rounds: Number of simulation rounds to run
+        :param norm: Whether or not to normalize the goal values
+        :return: Sum of goal values across all simulation rounds
+        """
         [goal] = self.engine.query(query=Term('simulate', *[state.to_term(), role, Var('Value'), Constant(rounds)]),
                                    backend='swipl')
         return self._goalnorm[role](int(goal)) if norm else int(goal)
@@ -105,9 +120,7 @@ class Simulator(object):
         [term] = self.engine.query(
             query=Term('sees_pl', *[state.to_term(), jointaction.to_term(), role, Var('Percepts')]),
             backend="swipl")
-        if term != Term('[]'):
-            return Percepts.from_term(term)
-        return Percepts(role, list())  # no percepts
+        return Percepts.from_term(term)
 
     def update_states_ii(self, states, action, percepts):
         [new_states] = self.engine.query(query=Term('update_valid_states', *[list2term([s.to_term() for s in states]),
@@ -122,112 +135,3 @@ class Simulator(object):
                                                                                Var('NewStates')]),
                                               backend="swipl")
         return [State(facts) for facts in term2list(terminal_states)]
-
-
-class State:
-    """Represents the state of a game."""
-
-    def __init__(self, facts):
-        self.facts = facts
-
-    def with_actions(self, actions):
-        new_facts = deepcopy(self.facts)
-        return State(new_facts + [action.to_term() for action in actions])
-
-    def with_jointaction(self, jointaction):
-        new_facts = deepcopy(self.facts)
-        return State(new_facts + [action.to_term() for action in jointaction.actions])
-
-    def sort(self):
-        self.facts = sorted(self.facts, key=lambda t: str(t))
-        return self
-
-    def __repr__(self):
-        return ', '.join([str(fact) for fact in self.facts])
-
-    @classmethod
-    def from_term(cls, term):
-        return cls(term2list(term))
-
-    def to_term(self):
-        return list2term(self.facts)
-
-
-class Action:
-    def __init__(self, role=None, action=None):
-        self.role = role
-        self.action = action
-
-    @classmethod
-    def from_term(cls, term):
-        return cls(term.args[0], term.args[1])
-
-    def to_term(self):
-        return Term('does', *[self.role, self.action])
-
-    def __repr__(self):
-        return str(self.action)
-
-    def __eq__(self, other):
-        return self.to_term() == other.to_term()
-
-    def __hash__(self):
-        return hash(self.to_term())
-
-
-class JointAction:
-    """Represents a move for each role in the game."""
-
-    def __init__(self, actions=None):
-        self.actions = OrderedSet(actions) if actions is not None else OrderedSet()
-
-    @classmethod
-    def from_term(cls, term):
-        actions = [Action.from_term(action_term) for action_term in term2list(term)]
-        return cls(actions)
-
-    def to_term(self):
-        return list2term([action.to_term() for action in self.actions])
-
-    def add_action(self, action):
-        if action is not None:
-            self.actions.add(action)
-
-    def get_action(self, role):
-        for action in self.actions:
-            if action.role == role:
-                return action
-        return None
-
-    def __repr__(self):
-        return str([action.action for action in self.actions])
-
-    def __len__(self):
-        return len(self.actions)
-
-    def __eq__(self, other):
-        return self.actions == other.actions
-
-    def __hash__(self):
-        return hash(frozenset(self.actions))
-
-
-class Percepts:
-    """Represents the percepts of a player"""
-
-    def __init__(self, role, percepts):
-        self.role = role
-        self.percepts = percepts
-
-    @classmethod
-    def from_term(cls, term):
-        role = term2list(term)[0].args[0]
-        percepts = [sees_term.args[1] for sees_term in term2list(term)]
-        return cls(role, percepts)
-
-    def to_term(self):
-        terms = [Term('sees', *[self.role, percept]) for percept in self.percepts]
-        return list2term(terms)
-
-    def __repr__(self):
-        return str(self.percepts)

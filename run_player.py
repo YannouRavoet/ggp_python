@@ -1,14 +1,17 @@
 import sys
+
 sys.path.append("/home/yannou/git/ggp_problog/src")
 import argparse
-from players import legal, random, mcts, legal_ii, random_ii
+from players.mcts import mcts, mcts_ii
+from players.base import random, random_ii, legal, legal_ii
 
-playerclasses = {
+playerClasses = {
     'legal': legal.LegalPlayer,
     'random': random.RandomPlayer,
     'mcts': mcts.MCTSPlayer,
     'legal_ii': legal_ii.LegalPlayerII,
-    'random_ii': random_ii.RandomPlayerII
+    'random_ii': random_ii.RandomPlayerII,
+    'mcts_ii': mcts_ii.MCTSPlayerII,
 }
 
 if __name__ == "__main__":
@@ -18,7 +21,8 @@ if __name__ == "__main__":
     DEFAULT_PORT = 5601
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-c', '--playerclass', dest='playerclass', type=str, required=True, choices=list(playerclasses.keys()),
+    parser.add_argument('-cls', '--playerclass', dest='playerclass', type=str, required=True,
+                        choices=list(playerClasses.keys()),
                         help='player class to implement')
     parser.add_argument('-p', '--port', dest='port', type=int, default=DEFAULT_PORT,
                         help='port to listen to')
@@ -27,7 +31,7 @@ if __name__ == "__main__":
     """""""""""""""
     RUN GAMEPLAYER
     """""""""""""""
-    player = playerclasses[args.playerclass](args.port)
+    player = playerClasses[args.playerclass](args.port)
     try:
         player.serve_forever()
     except KeyboardInterrupt:

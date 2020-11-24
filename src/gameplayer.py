@@ -1,10 +1,12 @@
 import time
 import stopit
-from abc import ABC, abstractmethod
 from http.server import HTTPServer
-from utils.ggp import Simulator, JointAction, Action
+from abc import ABC, abstractmethod
 from utils.match_info import MatchInfo
-from utils.msg import MessageType, MessageHandler, Message
+from utils.ggp.simulator import Simulator
+from utils.messaging.message import Message
+from utils.messaging.message_type import MessageType
+from utils.messaging.message_handler import MessageHandler
 
 
 class GamePlayer(HTTPServer, ABC):

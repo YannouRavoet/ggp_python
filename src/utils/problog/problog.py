@@ -8,7 +8,7 @@ class ProblogEngine:
     def __init__(self, gdl_rules):
         self.engine = DefaultEngine()
         self.base_string = '\n'.join([gdlstring2problogstring(gdl_rules),
-                                      read_rules('src/utils/problog.pl', cmt_token='%')])
+                                      read_rules('src/utils/problog/problog.pl', cmt_token='%')])
         self.base_db = self.engine.prepare(PrologString(self.base_string))
 
     def query(self, query, state=None, return_bool=False, backend=None):
