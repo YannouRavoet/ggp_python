@@ -1,7 +1,6 @@
-
-/* ++++++++++++++++++ */
-/* GDL helper methods */
-/* ++++++++++++++++++ */
+/* ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
+/*                                           GDL helper methods                                                       */
+/* ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 distinct(X,Y) :-
     X \= Y.
 or(X,_):-X.
@@ -48,9 +47,9 @@ minmax_goals(Role, Min, Max):-
     min_list(Goals, Min),
     max_list(Goals, Max).
 
-/* +++++++++++ */
-/* GDL methods */
-/* +++++++++++ */
+/* ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
+/*                                                  GDL methods                                                       */
+/* ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 
 % legal_jointaction\1 is true whenever JointAction contains one action per role that is legal in the current state.
 % e.g. (Tic Tac Toe): legal_jointaction([does(white, mark(1,1)), does(black, noop)])
@@ -98,9 +97,9 @@ simulate_iter(State, Role, Temp, Total, Rounds):-
     NewRounds is Rounds - 1,
     simulate_iter(State, Role, NewTemp, Total, NewRounds).
 
-/* ++++++++++++++ */
-/* GDL-II Methods */
-/* ++++++++++++++ */
+/* ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
+/*                                               GDL-II methods                                                       */
+/* ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 
 % update_valid_states/4 updates the list of States given the role's Action and Percepts into a list of valid successor states.
 update_valid_states(StatesIn, Action, Percepts, StatesOut):-
