@@ -40,7 +40,7 @@ goal_pl(State, Role, Value):-
     goal(Role, Value),
     maplist(retract,State),!.
 
-% minmax_goals\3 returns the minimum and maximum goal values for a role.
+% minmax_goals/3 returns the minimum and maximum goal values for a role.
 % This is used to normalize goal values between 0-1.
 minmax_goals(Role, Min, Max):-
     findall(Goal, clause(goal(Role, Goal), _), Goals),
@@ -51,7 +51,7 @@ minmax_goals(Role, Min, Max):-
 /*                                                  GDL methods                                                       */
 /* ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 
-% legal_jointaction\1 is true whenever JointAction contains one action per role that is legal in the current state.
+% legal_jointaction/2 is true whenever JointAction contains one action per role that is legal in the current state.
 % e.g. (Tic Tac Toe): legal_jointaction([does(white, mark(1,1)), does(black, noop)])
 legal_jointaction(State, JointAction) :-
     roles_pl(Roles),
@@ -63,7 +63,7 @@ legal_jointaction_iter(State, [RoleH|RoleT], Temp, JointAction) :-
     legal_pl(State, RoleH, Action),
     legal_jointaction_iter(State, RoleT, [Action|Temp], JointAction).
 
-% legal_jointaction_random\1 is used to generate a random JointAction. Usefull for simulations.
+% legal_jointaction_random/2 is used to generate a random JointAction. Usefull for simulations.
 legal_jointaction_random(State, JointAction):-
     roles_pl(Roles),
     legal_jointaction_random_iter(State, Roles, [], JointAction).
@@ -75,7 +75,7 @@ legal_jointaction_random_iter(State, [RoleH|RoleT], Temp, JointAction) :-
     legal_jointaction_iter(State, RoleT, [Action|Temp], JointAction).
 
 
-% simulate\3 simulates a random playthrough from the current state until a terminal state is reached.
+% simulate/3 simulates a random playthrough from the current state until a terminal state is reached.
 % It then finds the goal value for the given role in that terminal state.
 simulate(State, Role, Value) :-
     (terminal_pl(State) ->
@@ -86,7 +86,7 @@ simulate(State, Role, Value) :-
         simulate(NextState, Role, Value)
     ),!.
 
-% simulate\4 simulates multiple random playthroughs from a given state and sums up the total score for the given role.
+% simulate/4 simulates multiple random playthroughs from a given state and sums up the total score for the given role.
 simulate(State, Role, Total, Rounds) :-
     simulate_iter(State, Role, 0, Total, Rounds).
 
@@ -101,20 +101,28 @@ simulate_iter(State, Role, Temp, Total, Rounds):-
 /*                                               GDL-II methods                                                       */
 /* ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 
-% update_valid_states/4 updates the list of States given the role's Action and Percepts into a list of valid successor states.
-update_valid_states(StatesIn, Action, Percepts, StatesOut):-
-    update_valid_states(StatesIn, Action, Percepts, [], StatesOut).
+% update_valid_states/5 updates the list of States given the role's Action and Percepts into a list of valid successor states.
+% it filters the resulting states on terminality:
+%       Terminal == true => StatesOut contains only terminal states
+%       Terminal == false => StatesOut contains only non-terminal states
+update_valid_states(StatesIn, Action, Percepts, StatesOut, Terminal):-
+    update_valid_states(StatesIn, Action, Percepts, [], StatesOut, Terminal).
 
-update_valid_states([], _, _, TempStates, StatesOut):-
-    list_to_set(TempStates, StatesOut), !.
-update_valid_states([StatesInH|StatesInT], Action, Percepts, Temp, StatesOut):-
+update_valid_states([], _, _, TempStates, StatesOut, Terminal):-
+    list_to_set(TempStates, StatesOutUnfiltered),
+     (Terminal ->
+        filter_terminals(StatesOutUnfiltered, StatesOut)
+     ;
+        filter_nonterminals(StatesOutUnfiltered, StatesOut)
+     ),!.
+update_valid_states([StatesInH|StatesInT], Action, Percepts, Temp, StatesOut, Terminal):-
     generate_jointactions_ii(StatesInH, Action, Percepts, JointActions),
     length(JointActions, Length),
     (Length > 0 -> % If no jointactions were found that result in the same Percepts, the state was not true.
         build_states(StatesInH, JointActions, Temp, NewTemp),
-        update_valid_states(StatesInT, Action, Percepts, NewTemp, StatesOut)
+        update_valid_states(StatesInT, Action, Percepts, NewTemp, StatesOut, Terminal)
     ;
-        update_valid_states(StatesInT, Action, Percepts, Temp, StatesOut)
+        update_valid_states(StatesInT, Action, Percepts, Temp, StatesOut, Terminal)
     ).
 
 % generate_jointactions_ii/4 generates all jointactions that complete the role's Action and result in the given Percepts.
@@ -153,3 +161,39 @@ filter_terminals([StatesInH|StatesInT], Temp, StatesOut):-
     ;
         filter_terminals(StatesInT, Temp, StatesOut)
     ).
+
+% filter_nonterminals/2 removes all non-terminal states from StatesIn
+filter_nonterminals(StatesIn, StatesOut):-
+    filter_nonterminals(StatesIn, [], StatesOut).
+filter_nonterminals([], StatesOut, StatesOut).
+filter_nonterminals([StatesInH|StatesInT], Temp, StatesOut):-
+    (terminal_pl(StatesInH) ->
+        filter_nonterminals(StatesInT, Temp, StatesOut)
+    ;
+        filter_nonterminals(StatesInT, [StatesInH|Temp], StatesOut)
+    ).
+
+% create_valid_states/5 builds a set of all valid states by updating_valid_states from the start state on with the
+% given ActionHist and PerceptHist. On the final set it filters for either terminal or non-terminal states as explained
+% in update_valid_states/5
+create_valid_states(ActionHist, PerceptHist, StatesOut, Terminal):-
+    init_pl(S0),
+    create_valid_states([S0], ActionHist, PerceptHist, StatesOut, Terminal).
+
+create_valid_states(StatesIn, [Action], [Percepts], StatesOut, Terminal):-
+    update_valid_states(StatesIn, Action, Percepts, StatesOut, Terminal).
+create_valid_states(StatesIn, [ActionHistH|ActionHistT], [PerceptHistH|PerceptHistT], StatesOut, Terminal):-
+    update_valid_states(StatesIn, ActionHistH, PerceptHistH, NewStatesIn, false),
+    create_valid_states(NewStatesIn, ActionHistT, PerceptHistT, StatesOut, Terminal).
+
+
+% total_goal/2 returns the average goal value of States for the given Role
+total_goal(States, Role, Goal):-
+    total_goal(States, Role, 0, Goal).
+total_goal([], _, Goal, Goal).
+total_goal([StatesH|StatesT], Role, Temp, Goal):-
+    goal_pl(StatesH, Role, NewGoal),
+    NewTemp is Temp + NewGoal,
+    total_goal(StatesT, Role, NewTemp, Goal).
+
+

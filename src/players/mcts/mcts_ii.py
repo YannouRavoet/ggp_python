@@ -1,3 +1,5 @@
+import random
+
 import stopit
 from gameplayer import GamePlayerII
 from players.mcts.mcts import MCTSNode
@@ -9,8 +11,9 @@ class MCTSPlayerII(GamePlayerII):
     def __init__(self, port, expl_bias=2):
         super().__init__(port)
         self.root_nodes = None
+        self.max_root_nodes = 10        # max number of root_nodes to keep track of (chosen randomly
         self.expl_bias = expl_bias
-        self.rounds_per_loop = 25
+        self.rounds_per_loop = 1
 
         self.action_hist = list()
         self.percept_hist = list()
@@ -31,7 +34,7 @@ class MCTSPlayerII(GamePlayerII):
         if not first_round:
             self.action_hist.append(Action(self.role, args[0]))
             self.percept_hist.append(Percepts(self.role, args[1]))
-            self.update_root_nodes()
+            self.update_root_nodes(terminal=False)
 
         while True:
             for root_node in self.root_nodes:
@@ -48,33 +51,29 @@ class MCTSPlayerII(GamePlayerII):
     def player_stop(self, *args, **kwargs):
         self.action_hist.append(Action(self.role, args[0]))
         self.percept_hist.append(Percepts(self.role, args[1]))
-        self.update_root_nodes()
-        terminal_states = self.simulator.filter_terminal_states(self.get_root_states())
-        goalsum = 0
-        for state in terminal_states:
-            goalsum += self.simulator.goal(state, self.role)
-        return goalsum / len(terminal_states)
+        self.update_root_nodes(terminal=True)
+        return self.simulator.avg_goal(self.get_root_states(), self.role)
 
-    def update_root_nodes(self):
+    def update_root_nodes(self, terminal):
         """
         Updates the list of root_nodes by going over each direct child node and keeping those that have the correct
         action and percepts.
         :return: void
         """
         new_root_nodes = list()
-        baction = self.action_hist[-1]
-        bpercepts = self.percept_hist[-1]
         for root_node in self.root_nodes:
             for ja, child_node in root_node.children.items():
-                caction = ja.get_action(self.role)
-                cpercepts = self.simulator.percepts(root_node.state, ja, self.role)
-                if caction == baction and \
-                        cpercepts == bpercepts:
-                    new_root_nodes.append(child_node)
-        print(f"Had {len(self.root_nodes)} root_nodes.")
-        print(f"Action: {self.action_hist[-1]} - Percepts: {self.percept_hist[-1]}")
-        self.root_nodes = new_root_nodes
-        print(f"Now {len(self.root_nodes)} root_nodes.")
+                if child_node is None:
+                    child_node = self.make_node(parent=root_node, jointaction=ja,
+                                                state=self.simulator.next_state(root_node.state, ja))
+                if ja.get_action(self.role) == self.action_hist[-1] and \
+                        self.simulator.percepts(root_node.state, ja, self.role) == self.percept_hist[-1]:
+                    if (child_node.is_leaf() and terminal) or (not child_node.is_leaf() and not terminal):
+                        child_node.parent = None
+                        child_node.jointaction = None
+                        new_root_nodes.append(child_node)
+        self.root_nodes = random.choices(new_root_nodes, k=self.max_root_nodes)
+        print(f"Currently {len(self.root_nodes)} root_nodes.")
 
     def action_choice(self):
         best_children = list()

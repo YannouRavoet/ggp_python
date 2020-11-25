@@ -8,7 +8,12 @@ from problog.logic import Term, Var, list2term, term2list, Constant
 
 
 class Simulator(object):
-    """Used to make inferences with the provided set of rules."""
+    """Used to make inferences with the provided set of rules. The main functionality of a Simulator is to
+        1. translate Prolog and Problog query-calls to Python function calls
+        2. parse the query results into States, Action, JointAction, Percepts objects.
+        Whenever multiple calls to the engine have to be made (e.g. simulations,...), it is best to program this
+        functionality in Prolog/ProbLog code to limit the amount of engine calls.
+     """
 
     def __init__(self, gdl_rules):
         self.gdl_rules = gdl_rules
@@ -19,6 +24,7 @@ class Simulator(object):
         def goalnorm(mini, maxi):
             def norm(goal):
                 return (goal - mini) / (maxi - mini)
+
             return norm
 
         goalnorms = dict()
@@ -44,9 +50,9 @@ class Simulator(object):
         assert (len(actions) == len(roles))
         return JointAction([Action(role, action) for role, action in zip(roles, actions)])
 
-    """""""""""
-        GDL
-    """""""""""
+    """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+                                                    GDL
+    """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
     def roles(self):
         [roles_term] = self.engine.query(query=Term('roles_pl', Var('Roles')),
@@ -102,9 +108,9 @@ class Simulator(object):
                                    backend='swipl')
         return self._goalnorm[role](int(goal)) if norm else int(goal)
 
-    """""""""""
-       GDL-II
-    """""""""""
+    """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+                                                    GDL-II
+    """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
     def random(self):
         class Environment:
@@ -122,16 +128,28 @@ class Simulator(object):
             backend="swipl")
         return Percepts.from_term(term)
 
-    def update_states_ii(self, states, action, percepts):
-        [new_states] = self.engine.query(query=Term('update_valid_states', *[list2term([s.to_term() for s in states]),
-                                                                             action.to_term(),
-                                                                             percepts.to_term(),
-                                                                             Var('NewStates')]),
-                                         backend="swipl")
-        return [State(facts) for facts in term2list(new_states)]
+    def update_states_ii(self, states, action, percepts, filter_terminal=False):
+        [states] = self.engine.query(query=Term('update_valid_states', *[list2term([s.to_term() for s in states]),
+                                                                         action.to_term(),
+                                                                         percepts.to_term(),
+                                                                         Var('NewStates'),
+                                                                         Term('true' if filter_terminal else 'false')]),
+                                     backend="swipl")
+        return [State(facts) for facts in term2list(states)]
 
-    def filter_terminal_states(self, states):
-        [terminal_states] = self.engine.query(query=Term('filter_terminals', *[list2term([s.to_term() for s in states]),
-                                                                               Var('NewStates')]),
-                                              backend="swipl")
-        return [State(facts) for facts in term2list(terminal_states)]
+    # Creates a set of all states that are hypothetically true given the action and percept hist of the player's role.
+    def create_valid_states_ii(self, action_hist, percept_hist, filter_terminal=False):
+        [states] = self.engine.query(query=Term('create_valid_states', *[list2term([a.to_term() for a in action_hist]),
+                                                                         list2term([s.to_term() for s in percept_hist]),
+                                                                         Var('StatesOut'),
+                                                                         Term('true' if filter_terminal else 'false')]),
+                                     backend="swipl")
+        return [State(facts) for facts in term2list(states)]
+
+    def avg_goal(self, states, role, norm=True):
+        [total_goal] = self.engine.query(query=Term('total_goal', *[list2term([s.to_term() for s in states]),
+                                                                    role,
+                                                                    Var('Goal')]),
+                                         backend="swipl")
+
+        return self._goalnorm[role](int(total_goal)/len(states)) if norm else int(total_goal)/len(states)
