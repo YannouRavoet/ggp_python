@@ -93,16 +93,16 @@
 )
 
 (<= (next (has_dice ?p ?x ?y))
-	(true (has_dice ?p ?x ?y)) ; stays true until some other dice are rolled
+	(true (has_dice ?p ?x ?y))
 	(not any_roll)
 )
 
 (<= (sort ?x ?y ?x ?y)
-	(leq ?y ?x)
+	(gteq ?x ?y)
 )
 
-(<= (sort ?y ?x ?x ?y)
-	(leq ?y ?x)
+(<= (sort ?x ?y ?y ?x)
+	(not (gteq ?x ?y))
 )
 
 
@@ -185,15 +185,6 @@
 (dots 4)
 (dots 5)
 (dots 6)
-
-(<= (leq ?x ?x)
-	(dots ?x)
-)
-
-(<= (leq ?x ?y)
-	(succ ?x ?i)
-	(leq ?i ?y)
-)
 
 (succ_values 0 0   3 1)
 

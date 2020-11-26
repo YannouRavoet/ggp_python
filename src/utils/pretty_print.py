@@ -59,7 +59,7 @@ class Grid:
 class PrettyPrinterFactory:
     @staticmethod
     def make_printer(gamefile):
-        if gamefile == 'tictactoe.gdl' or gamefile=='kriegtictactoe_v2.gdl':
+        if gamefile == 'tictactoe.gdl' or gamefile=='kriegtictactoe.gdl':
             return BaseBoardPrinter(rows=3, cols=3)
         if gamefile == 'connectfour.gdl':
             return ConnectFourPrinter(rows=6, cols=8, row_div_mod=-1, col_div_mod=1)

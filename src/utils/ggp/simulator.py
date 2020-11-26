@@ -152,4 +152,22 @@ class Simulator(object):
                                                                     Var('Goal')]),
                                          backend="swipl")
 
-        return self._goalnorm[role](int(total_goal)/len(states)) if norm else int(total_goal)/len(states)
+        return self._goalnorm[role](int(total_goal) / len(states)) if norm else int(total_goal) / len(states)
+
+    def filter_states_percepts_ii(self, states, jointactions, role, percepts):
+        [indices] = self.engine.query(query=Term('filter_states_percepts', *[list2term([s.to_term() for s in states]),
+                                                                             list2term(
+                                                                                 [ja.to_term() for ja in jointactions]),
+                                                                             role,
+                                                                             percepts.to_term(),
+                                                                             Var('Indices')]),
+                                      backend="swipl")
+        return [int(i) for i in term2list(indices)]
+
+    def avg_goal_from_hist(self, action_hist, percept_hist, role, norm=True):
+        [avg] = self.engine.query(query=Term('avg_goal_from_history', *[list2term([a.to_term() for a in action_hist]),
+                                                                        list2term([p.to_term() for p in percept_hist]),
+                                                                        role,
+                                                                        Var('AvgGoal')]),
+                                  backend="swipl")
+        return self._goalnorm[role](int(avg)) if norm else int(avg)

@@ -1,3 +1,5 @@
+import random
+
 import stopit
 from math import sqrt, log
 from gameplayer import GamePlayer
@@ -7,26 +9,18 @@ class MCTSNode:
     """MCTSNode represents a node in a MCTS built game-tree."""
 
     def __init__(self, parent, parent_jointaction, state, child_jointactions):
-        self.parent = parent                    # parent node in the game tree
-        self.jointaction = parent_jointaction   # JointAction made from parent to reach this node
-        self.state = state                      # State of this node
-        self.nb_visit = 0                       # nb of times the node was visited
-        self.total_goal = 0                     # sum of goal values the node has resulted in
-        self.children = dict()                  # Jointactions and their corresponding child nodes
+        self.parent = parent  # parent node in the game tree
+        self.jointaction = parent_jointaction  # JointAction made from parent to reach this node
+        self.state = state  # State of this node
+        self.nb_visit = 0  # nb of times the node was visited
+        self.total_goal = 0  # sum of goal values the node has resulted in
+        self.children = dict()  # Jointactions and their corresponding child nodes
 
         for joint_action in child_jointactions:
             self.children[joint_action] = None
 
     def get_child(self, jointaction):
         return self.children[jointaction]
-
-    def expand(self, jointaction, childState, child_jointactions):
-        child = self.__init__(parent=self,
-                              parent_jointaction=jointaction,
-                              state=childState,
-                              child_jointactions=child_jointactions)
-        self.children[jointaction] = child
-        return child
 
     def explored_children(self):
         return list(filter(lambda c: c is not None, self.children.values()))
@@ -40,7 +34,7 @@ class MCTSNode:
                 return True
         return False
 
-    def is_leaf(self):
+    def is_terminal(self):
         return len(self.children) == 0
 
     def UCB1(self, bias):
@@ -52,6 +46,20 @@ class MCTSNode:
         return self.total_goal / self.nb_visit \
             if self.nb_visit != 0 \
             else 0
+
+    def children_maxUCB1(self, bias):
+        explored_children = self.explored_children()
+        if len(explored_children) > 0:
+            maxvalue = max([c.UCB1(bias) for c in explored_children])
+            return [c for c in explored_children if c.UCB1(bias) == maxvalue]
+        return list()
+
+    def children_maxAVG(self):
+        explored_children = self.explored_children()
+        if len(explored_children) > 0:
+            maxvalue = max([c.AVG() for c in explored_children])
+            return [c for c in explored_children if c.AVG() == maxvalue]
+        return list()
 
     def print(self, bias, level=0, last_level=1):
         if level <= last_level:
@@ -65,23 +73,28 @@ class MCTSNode:
                f' VISITS={self.nb_visit},' \
                f' AVG={self.AVG():.2f}] '
 
+    def __repr__(self):
+        return str(f"AVG:{self.AVG():.2f} - STATE:{str(self.state)}")
+
 
 class MCTSPlayer(GamePlayer):
     """MCTSPlayer builds a game tree using Monte-Carlo Tree Search with Upper Confidence Bound 1 (UCB1)."""
 
     def __init__(self, port, expl_bias=2):
         super().__init__(port)
-        self.root_node = None       # root node of the game tree
+        self.root_node = None  # root node of the game tree
         self.expl_bias = expl_bias  # exploration bias to use with UCB1
-        self.rounds_per_loop = 100  # simulation rounds per expansion
+        self.rounds_per_loop = 50  # simulation rounds per expansion
 
-    def make_node(self, parent, jointaction, state):
+    def make_node(self, parent, jointaction, state=None):
+        if state is None:
+            state = self.simulator.next_state(parent.state, jointaction)
         child_jointactions = self.simulator.legal_jointactions(state)
         return MCTSNode(parent, jointaction, state, child_jointactions)
 
     @stopit.threading_timeoutable()
     def player_start(self):
-        self.root_node = self.make_node(None, None, self.simulator.initial_state())
+        self.root_node = self.make_node(None, None, state=self.simulator.initial_state())
 
     @stopit.threading_timeoutable()
     def player_play(self, first_round, *args, **kwargs):
@@ -89,14 +102,17 @@ class MCTSPlayer(GamePlayer):
             jointaction = self.simulator.actions_2_jointaction(args[0])
             self.update_root_node(jointaction)
 
+        loops = 0
         while True:
             try:
                 node = self.select(self.root_node)
                 node = self.expand(node)
                 goal_value = self.simulate(node, rounds=self.rounds_per_loop)
                 self.backprop(node, goal_value, visits=self.rounds_per_loop)
+                loops += self.rounds_per_loop
             except stopit.TimeoutException:
                 self.simulator.engine.clear_stack()
+                print(f"Ran {loops} loops of MCTS")
                 return self.action_choice()
 
     @stopit.threading_timeoutable()
@@ -107,30 +123,27 @@ class MCTSPlayer(GamePlayer):
 
     def update_root_node(self, jointaction):
         if self.root_node.get_child(jointaction) is None:  # child was not expanded yet
-            self.root_node = self.make_node(parent=None, jointaction=None,
-                                            state=self.simulator.next_state(self.root_node.state, jointaction))
+            self.root_node = self.make_node(parent=None, jointaction=None)
         else:
             self.root_node = self.root_node.get_child(jointaction)
             self.root_node.parent = None
-            self.root_node.jointaction = None
 
     def action_choice(self):
-        best_child = max(self.root_node.explored_children(), key=lambda c: c.AVG())
-        return best_child.jointaction.get_action(self.role)
+        best_children = self.root_node.children_maxAVG()
+        return random.choice(best_children).jointaction.get_action(self.role)
 
     # PHASE 1: Select best node to expand with UCB1 starting from a given node
     def select(self, node):
-        while not node.has_unexplored_children() and not node.is_leaf():
-            best_jointaction = max(node.children, key=lambda ja: node.children[ja].UCB1(self.expl_bias))
-            node = node.get_child(best_jointaction)
+        while not node.has_unexplored_children() and not node.is_terminal():
+            best_childnodes = node.children_maxUCB1(self.expl_bias)
+            node = random.choice(best_childnodes)
         return node
 
     # PHASE 2: Expand the given node
     def expand(self, node):
         jointactions = node.unexplored_jointactions()
         if len(jointactions) > 0:
-            childnode = self.make_node(parent=node, jointaction=jointactions[0],
-                                       state=self.simulator.next_state(node.state, jointactions[0]))
+            childnode = self.make_node(parent=node, jointaction=jointactions[0])
             node.children[jointactions[0]] = childnode
             return childnode
         return node  # terminal node

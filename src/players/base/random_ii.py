@@ -20,13 +20,13 @@ class RandomPlayerII(GamePlayerII):
     def print_states(self, terminal):
         print(f"Currently holding {len(self.states)} hypothetical {'non-' if not terminal else ''}terminal states")
 
-    def update_states(self, terminal):
+    def update_states(self):
         self.states = random.choices(
-            self.simulator.update_states_ii(self.states, self.action_hist[-1], self.percept_hist[-1], terminal),
+            self.simulator.update_states_ii(self.states, self.action_hist[-1], self.percept_hist[-1], filter_terminal=True),
             k=self.max_states)
         if len(self.states) == 0:
             self.states = random.choices(
-                self.simulator.create_valid_states_ii(self.action_hist, self.percept_hist, terminal),
+                self.simulator.create_valid_states_ii(self.action_hist, self.percept_hist, filter_terminal=True),
                 k=self.max_states)
 
     @stopit.threading_timeoutable()
@@ -38,12 +38,11 @@ class RandomPlayerII(GamePlayerII):
         if not first_round:
             self.action_hist.append(Action(self.role, args[0]))
             self.percept_hist.append(Percepts(self.role, args[1]))
-            self.update_states(terminal=False)
+            self.update_states()
         return random.choice(self.simulator.legal_actions(random.choice(self.states), self.role))
 
     @stopit.threading_timeoutable()
     def player_stop(self, *args, **kwargs):
         self.action_hist.append(Action(self.role, args[0]))
         self.percept_hist.append(Percepts(self.role, args[1]))
-        self.update_states(terminal=True)
-        return self.simulator.avg_goal(self.states, self.role)
+        return self.simulator.avg_goal_from_hist(self.action_hist, self.percept_hist, self.role)

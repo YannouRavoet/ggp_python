@@ -6,9 +6,12 @@ from gamemanager import GameManager, Player
 games = {
     "tictactoe": "tictactoe.gdl",
     "connectfour": "connectfour.gdl",
-    "sudoku": "sudoku.gdl",
+    "snake": "snake2p.gdl",
+    "chess": "chess.gdl",
+    "blockworld": "blocksworlds.gdl",
     "montyhallproblem": "montyhall.gdl",
-    "kriegtictactoe": "kriegtictactoe_v2.gdl"
+    "kriegtictactoe": "kriegtictactoe.gdl",
+    "meier": "meier.gdl"
 }
 
 if __name__ == "__main__":

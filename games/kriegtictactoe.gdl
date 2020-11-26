@@ -1,239 +1,124 @@
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Krieg Tictactoe
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(role white)
+(role black)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; role
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(init (cell 1 1 b))
+(init (cell 1 2 b))
+(init (cell 1 3 b))
+(init (cell 2 1 b))
+(init (cell 2 2 b))
+(init (cell 2 3 b))
+(init (cell 3 1 b))
+(init (cell 3 2 b))
+(init (cell 3 3 b))
+(init (step 1))
 
-    (role white)
-    (role black)
-    (role random)
+(<= (legal ?p (mark ?m ?n))
+   (role ?p)
+   (true (cell ?m ?n ?c))
+   (distinct ?c ?p)
+   (not (true (tried ?p ?m ?n))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; base
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(<= doublehit
+   (does white (mark ?m ?n))
+   (does black (mark ?m ?n)))
 
-    (index 1)
-    (index 2)
-    (index 3)
+(<= (validmove ?p ?m ?n)
+   (does ?p (mark ?m ?n))
+   (true (cell ?m ?n b))
+   (not doublehit))
 
-    (<= (base (cell ?m ?n x)) (index ?m) (index ?n))
-    (<= (base (cell ?m ?n o)) (index ?m) (index ?n))
-    (<= (base (cell ?m ?n b)) (index ?m) (index ?n))
+(<= (marked ?m ?n)
+   (does ?p (mark ?m ?n))
+   (not doublehit))
 
-    (<= (base (tried white ?m ?n)) (index ?m) (index ?n))
-    (<= (base (tried black ?m ?n)) (index ?m) (index ?n))
+(<= (next (cell ?m ?n ?p))
+   (validmove ?p ?m ?n))
 
+(<= (next (cell ?m ?n ?c))
+   (true (cell ?m ?n ?c))
+   (distinct ?c b))
 
-    (<= (input white (mark ?m ?n)) (index ?m) (index ?n))
-    (<= (input black (mark ?m ?n)) (index ?m) (index ?n))
+(<= (next (cell ?m ?n b))
+   (true (cell ?m ?n b))
+   (not (marked ?m ?n)))
 
-    (input random (tiebreak x))
-    (input random (tiebreak o))
+(<= (next (tried ?p ?m ?n))
+   (does ?p (mark ?m ?n))
+   (not (validmove ?p ?m ?n)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; init
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(<= (next (tried ?p ?m1 ?n1))
+   (true (tried ?p ?m1 ?n1))
+   (does ?p (mark ?m2 ?n2))
+   (not (validmove ?p ?m2 ?n2)))
 
-    (init (cell 1 1 b))
-    (init (cell 1 2 b))
-    (init (cell 1 3 b))
-    (init (cell 2 1 b))
-    (init (cell 2 2 b))
-    (init (cell 2 3 b))
-    (init (cell 3 1 b))
-    (init (cell 3 2 b))
-    (init (cell 3 3 b))
+(<= (next (step ?n))
+   (true (step ?m))
+   (succ ?m ?n))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; legal
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(<= (sees ?p (yougotit ?m ?n))
+   (validmove ?p ?m ?n))
 
-    (<= (legal white (mark ?m ?n))
-       (index  ?m)
-       (index  ?n)
-       (not (true (tried white ?m ?n))))
-
-
-    (<= (legal black (mark ?m ?n))
-       (index  ?m)
-       (index  ?n)
-       (not (true (tried black ?m ?n))))
-
-   (legal random (tiebreak x))
-   (legal random (tiebreak o))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; next
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;; any new attempt to mark a cell is recorded
-    (<= (next (tried ?p ?m ?n))
-       (does ?p (mark ?m ?n)))
-
-;;; all recorded attempts are remembered
-    (<= (next (tried ?r ?m ?n))
-      (true (tried ?r ?m ?n)))
-
-;;; white is successful in marking a blank cell
-;;; when black moves in a different column or row
-    (<= (next (cell ?m ?n x))
-      (does white (mark ?m ?n))
-      (true (cell ?m ?n b))
-      (or (distinct ?m ?j) (distinct ?n ?k))
-      (does black (mark ?j ?k)))
-
-;;; black is successful in marking a blank cell
-;;; when white moves in a different column or row
-    (<= (next (cell ?m ?n o))
-      (does black (mark ?m ?n))
-      (true (cell ?m ?n b))
-      (or (distinct ?m ?j) (distinct ?n ?k))
-      (does white (mark ?j ?k)))
-
-
-;;; if both players aim at the same cell, then that cell
-;;; gets marked by the result of the random tiebreak move
-    (<= (next (cell ?m ?n ?w))
-      (true (cell ?m ?n b))
-      (does black (mark ?m ?n))
-      (does white (mark ?m ?n))
-      (does random (tiebreak ?w)))
-
-;;; markings are forever
-    (<= (next (cell ?m ?n x))
-      (true (cell ?m ?n x)))
-
-    (<= (next (cell ?m ?n o))
-      (true (cell ?m ?n o)))
-
-;;; a cell remains blank if no player attempts to mark it
-    (<= (next (cell ?m ?n b))
-      (true (cell ?m ?n b))
-      (not (marked ?m ?n)))
-
-    (<= (marked ?m ?n)
-      (does ?r (mark ?m ?n)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; sees
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;; players get ok when they mark a blank cell
-;;; in a different column or row from where their opponent moves
-    (<= (sees ?r ok)
-      (does ?r (mark ?m ?n))
-      (true (cell ?m ?n b))
-      (does ?s (mark ?j ?k))
-      (or (distinct ?m ?j) (distinct ?n ?k)))
-
-
-;;; white gets ok when he marks a blank cell
-;;; and the random tiebreak went to his side
-    (<= (sees white ok)
-      (does white (mark ?m ?n))
-      (true (cell ?m ?n b))
-      (does random (tiebreak x)))
-
-;;; black gets ok when he marks a blank cell
-;;; and random tiebreak went to his side
-    (<= (sees black ok)
-      (does black (mark ?m ?n))
-      (true (cell ?m ?n b))
-      (does random (tiebreak o)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; goal
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(<= (goal white 100)
-   (line x)
-   (not (line o)))
-
-(<= (goal white 50)
-   (line x)
-   (line o))
-
-(<= (goal white 50)
-    (not open)
-    (not (line x))
-    (not (line o)))
-
-(<= (goal white 0)
-   (line o)
-   (not (line x)))
-
-
-(<= (goal black 100)
-   (line o)
-   (not (line x)))
-
-(<= (goal black 50)
-   (line x)
-   (line o))
-
-(<= (goal black 50)
-    (not open)
-    (not (line x))
-    (not (line o)))
-
-(<= (goal black 0)
-   (line x)
-   (not (line o)))
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; terminal
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(<= (sees ?p (mark ?m ?n))
+   (does ?p (mark ?m ?n))
+   (not (validmove ?p ?m ?n)))
 
 (<= terminal
-   (line x))
+   (line white))
 
 (<= terminal
-   (line o))
+   (line black))
 
 (<= terminal
    (not open))
 
+(<= terminal
+   (true (step 30)))
 
+(<= (line ?c)
+   (true (cell ?m 1 ?c))
+   (true (cell ?m 2 ?c))
+   (true (cell ?m 3 ?c)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; support
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(<= (line ?c)
+   (true (cell 1 ?n ?c))
+   (true (cell 2 ?n ?c))
+   (true (cell 3 ?n ?c)))
 
-    (<= (row ?m ?x)
-        (true (cell ?m 1 ?x))
-        (true (cell ?m 2 ?x))
-        (true (cell ?m 3 ?x)))
+(<= (line ?c)
+   (true (cell 1 1 ?c))
+   (true (cell 2 2 ?c))
+   (true (cell 3 3 ?c)))
 
-    (<= (column ?n ?x)
-        (true (cell 1 ?n ?x))
-        (true (cell 2 ?n ?x))
-        (true (cell 3 ?n ?x)))
+(<= (line ?c)
+   (true (cell 1 3 ?c))
+   (true (cell 2 2 ?c))
+   (true (cell 3 1 ?c)))
 
-    (<= (diagonal ?x)
-        (true (cell 1 1 ?x))
-        (true (cell 2 2 ?x))
-        (true (cell 3 3 ?x)))
+(<= open
+   (true (cell ?m1 ?n1 b))
+   (not (true (tried white ?m1 ?n1)))
+   (true (cell ?m2 ?n2 b))
+   (not (true (tried black ?m2 ?n2))))
 
-    (<= (diagonal ?x)
-        (true (cell 1 3 ?x))
-        (true (cell 2 2 ?x))
-        (true (cell 3 1 ?x)))
+(<= (goal white 100)
+   (line white))
+  
+(<= (goal white 50)
+   (not (line white))
+   (not (line black)))
+  
+(<= (goal white 0)
+   (line black))
 
+(<= (goal black 100)
+   (line black))
+  
+(<= (goal black 50)
+   (not (line white))
+   (not (line black)))
+  
+(<= (goal black 0)
+   (line white))
 
-    (<= (line ?x) (row ?m ?x))
-    (<= (line ?x) (column ?m ?x))
-    (<= (line ?x) (diagonal ?x))
-
-
-    (<= open (true (cell ?m ?n b)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; CLAUSE NOT FOUND FIX
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    (<= (tried ?r ?m ?n)
-        fail)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(<= (tried ?r ?m  ?n)
+    fail)

@@ -6,6 +6,8 @@ distinct(X,Y) :-
 or(X,_):-X.
 or(_,Y):-Y.
 
+gteq(X,Y):- X >= Y.
+
 roles_pl(Roles):-
     setof(R, role(R), Roles).
 init_pl(State):-
@@ -40,6 +42,7 @@ goal_pl(State, Role, Value):-
     goal(Role, Value),
     maplist(retract,State),!.
 
+
 % minmax_goals/3 returns the minimum and maximum goal values for a role.
 % This is used to normalize goal values between 0-1.
 minmax_goals(Role, Min, Max):-
@@ -52,7 +55,7 @@ minmax_goals(Role, Min, Max):-
 /* ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 
 % legal_jointaction/2 is true whenever JointAction contains one action per role that is legal in the current state.
-% e.g. (Tic Tac Toe): legal_jointaction([does(white, mark(1,1)), does(black, noop)])
+% e.g. (Tic Tac Toe): legal_jointaction(State, [does(white, mark(1,1)), does(black, noop)])
 legal_jointaction(State, JointAction) :-
     roles_pl(Roles),
     legal_jointaction_iter(State, Roles, [], JointAction).
@@ -196,4 +199,25 @@ total_goal([StatesH|StatesT], Role, Temp, Goal):-
     NewTemp is Temp + NewGoal,
     total_goal(StatesT, Role, NewTemp, Goal).
 
+
+%filter_states_percepts/4 filters all states from States that have percepts Percepts when jointactions JointActions are applied.
+%returns the indices of the valid states.
+filter_states_percepts(States, JointActions, Role, Percepts, Indices):-
+    filter_states_percepts(States, JointActions, Role, Percepts, 0, [], Indices).
+
+filter_states_percepts([], [], _, _, _, Indices, Indices):- !.
+filter_states_percepts([StatesH|StatesT], [JointActionsH|JointActionsT], Role, Percepts, CurInd, TempInds, Indices):-
+    sees_pl(StatesH, JointActionsH, Role, ActualPercepts),
+    NewInd is CurInd + 1,
+    (ActualPercepts == Percepts ->
+        filter_states_percepts(StatesT, JointActionsT, Role, Percepts, NewInd, [CurInd|TempInds], Indices)
+    ;
+        filter_states_percepts(StatesT, JointActionsT, Role, Percepts, NewInd, TempInds, Indices)
+    ).
+
+avg_goal_from_history(ActionHist, PerceptHist, Role, Goal):-
+    create_valid_states(ActionHist, PerceptHist, StatesOut, true),
+    total_goal(StatesOut, Role, GoalSum),
+    length(StatesOut, L),
+    Goal is div(GoalSum, L).
 

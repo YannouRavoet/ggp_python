@@ -121,7 +121,8 @@ def gdlstring2problogterms(gdl_rules):
     :param gdl_rules: a string of gdl_rules in KIF format (Knowledge Interchange Format)
     :return: ProbLog term representing a Prolog list
     """
-    return list(GDLtoProbLogParser().statements.parseString(gdl_rules, parseAll=True))
+    problogterms = list(GDLtoProbLogParser().statements.parseString(gdl_rules, parseAll=True))
+    return list(filter(lambda t: t.functor != 'succ', problogterms))
 
 
 def problogterms2problogstring(problogterms):
