@@ -9,7 +9,7 @@ or(_,_,_):- fail.
 or(_,_,_,_,_) :- fail.
 check(_,_,_,_):- fail.
 piece_has_moved(_,_,_):- fail.
-%blocksworlds.gdl
+%blocks.gdl
 on(_,_):- fail.
 %meier.gdl
 claiming(_):- fail.
@@ -17,3 +17,8 @@ guessing(_):- fail.
 game_over(_):- fail.
 has_dice(_,_,_):- fail.
 rolling_for(_):- fail.
+%stratego.gdl
+occupied(_,_,_):- fail.
+inPool(_,_):- fail.
+%blocks2p.gdl
+lifted(_):- fail.

@@ -92,7 +92,6 @@
 (init (control white))
 (init (step 1))
 
-; End initial state
 
 ;*******************************************************************************
 ;* NEXT STATE AXIOMS: REGULAR MOVES                                            *
@@ -321,8 +320,6 @@
     (true (cell ?kx ?ky ?king))
     (queen_threatens ?opponent ?x ?y ?kx ?ky ?u ?v))
 
-; End next state axioms
-
 ;*******************************************************************************
 ;* LEGAL MOVES and their auxilliary axioms                                     *
 ;*******************************************************************************
@@ -517,8 +514,6 @@
     (true (control black)))
 (<= (legal black noop)
     (true (control white)))
-
-; End legal move axioms
 
 ;*******************************************************************************
 ;* LEGAL PIECE MOVE AND THREAT AXIOMS: KING                                    *
@@ -851,8 +846,6 @@
     (true (pawn_moved_two wp ?x2))
     (pawn_capture ?x1 4 ?x2 3 black))
 
-; End legal piece move axioms
-
 ;*******************************************************************************
 ;* THREAT AXIOMS                                                               *
 ;* True if a piece owned by ?owner at (x,y) could be captured.                 *
@@ -918,9 +911,6 @@
     (coordinate ?ignorey)
     (coordinate ?cx)
     (coordinate ?cy))
-
-
-; End threat axioms
 
 ;*******************************************************************************
 ; AUXILIARY PREDICATES                                                         *
@@ -1015,8 +1005,6 @@
     (role ?player)
     (not (has_legal_move ?player)))
 
-; End auxiliary axioms 
-
 ;*******************************************************************************
 ;* GOALS AND TERMINAL STATES                                                   *
 ;* Player gets 100 for checkmating the opponent,                               *
@@ -1048,7 +1036,6 @@
     (true (control ?player))
     (stuck ?player))
 
-; End goals and terminals
 ;*******************************************************************************
 ;* GROUND FACTS                                                                *
 ;*******************************************************************************

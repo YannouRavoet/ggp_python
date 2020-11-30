@@ -1,0 +1,209 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Transit
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Roles
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(role transit)
+(role patrol)
+
+(blocked 1 5)
+(blocked 1 4)
+(blocked 5 1)
+(blocked 5 2)
+(blocked 5 3)
+(blocked 5 4)
+(blocked 5 5)
+(blocked 5 6)
+(blocked 5 7)
+(blocked 5 8)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; INIT Relations
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(init (control patrol))
+(init (location patrol 3 8))
+(init (location transit 2 1))
+(init (step 1))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; LEGAL Relations
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(<= (legal patrol (move ?dir))
+    (true (control patrol))
+    (true (location patrol ?x ?y))
+    (plegalstep ?dir ?x ?y))
+(<= (legal patrol (move nowhere))
+    (not (true (control patrol))))
+(<= (legal transit (move ?dir))
+    (true (control transit))
+    (true (location transit ?x ?y))
+    (tlegalstep ?dir ?x ?y))
+(<= (legal transit (move nowhere))
+    (not (true (control transit))))
+
+(<= (plegalstep north ?x ?y)
+    (pp ?y ?ynew)
+    (index ?x)
+    (not (blocked ?x ?ynew)))
+(<= (plegalstep south ?x ?y)
+    (pp ?ynew ?y)
+    (index ?x)
+    (not (blocked ?x ?ynew)))
+(<= (plegalstep east ?x ?y)
+    (pp ?x ?xnew)
+    (index ?y)
+    (not (blocked ?xnew ?y)))
+(<= (plegalstep west ?x ?y)
+    (pp ?xnew ?x)
+    (index ?y)
+    (not (blocked ?xnew ?y)))
+
+(<= (tlegalstep north ?x ?y)
+    (pp ?y ?ynew)
+    (index ?x)
+    (not (blocked ?x ?ynew)))
+(<= (tlegalstep deast ?x ?y)
+    (pp ?x ?xnew)
+    (pp ?y ?ynew)
+    (not (blocked ?xnew ?ynew)))
+(<= (tlegalstep dwest ?x ?y)
+    (pp ?xnew ?x)
+    (pp ?y ?ynew)
+    (not (blocked ?xnew ?ynew)))
+
+(<= (tlegalstep nowhere ?x ?y)
+    (index ?x)
+    (index ?y))
+(<= (plegalstep nowhere ?x ?y)
+    (index ?x)
+    (index ?y))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; NEXT Relations
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(<= (next (control patrol))
+    (true (control transit)))
+(<= (next (control transit))
+    (true (control patrol)))
+(<= (next (location ?char ?x2 ?y2))
+    (true (location ?char ?x1 ?y1))
+    (does ?char (move ?dir))
+    (nextcell ?dir ?x1 ?y1 ?x2 ?y2))
+(<= (next (step ?npp))
+    (true (step ?n))
+    (after ?n ?npp))
+
+
+(<= (nextcell north ?x ?y ?x ?ynew)
+    (pp ?y ?ynew)
+    (index ?x))
+(<= (nextcell south ?x ?y ?x ?ynew)
+    (index ?x)
+    (pp ?ynew ?y))
+(<= (nextcell east ?x ?y ?xnew ?y)
+    (pp ?x ?xnew)
+    (index ?y))
+(<= (nextcell west ?x ?y ?xnew ?y)
+    (pp ?xnew ?x)
+    (index ?y))
+(<= (nextcell deast ?x ?y ?xnew ?ynew)
+    (pp ?y ?ynew)
+    (pp ?x ?xnew))
+(<= (nextcell dwest ?x ?y ?xnew ?ynew)
+    (pp ?y ?ynew)
+    (pp ?xnew ?x))
+(<= (nextcell nowhere ?x ?y ?x ?y)
+    (index ?x)
+    (index ?y))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; SEES Relations
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(<= (sees ?r1 (location ?r2 ?x ?y))
+    (role ?r2)
+    (next (location ?r2 ?x ?y))
+    (next (location ?r1 ?x ?y))
+    (distinct ?r1 ?r2))
+(<= (sees patrol (location transit ?x 8))
+    (next (location transit ?x 8)))
+(<= (sees ?r (move ?dir))
+    (legal ?r (move ?dir)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; TERMINAL Relations
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(<= terminal crossed)
+(<= terminal timeout)
+(<= terminal captured)
+
+(<= crossed
+    (true (location transit ?x 8))
+    (not captured))
+(<= timeout
+    (true (step 30))
+    (not crossed)
+    (not captured))
+(<= captured
+    (true (location transit ?x ?y))
+    (true (location patrol ?x ?y)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; GOAL Relations
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(<= (goal patrol 100) timeout)
+(<= (goal transit 0) timeout)
+(<= (goal patrol 100) captured)
+(<= (goal transit 0) captured)
+(<= (goal transit 100) crossed)
+(<= (goal patrol 0) crossed)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; SUPPORT Relations
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(index 1)
+(index 2)
+(index 3)
+(index 4)
+(index 5)
+(index 6)
+(index 7)
+(index 8)
+
+(pp 1 2)
+(pp 2 3)
+(pp 3 4)
+(pp 4 5)
+(pp 5 6)
+(pp 6 7)
+(pp 7 8)
+
+(after 0 1)
+(after 1 2)
+(after 2 3)
+(after 3 4)
+(after 4 5)
+(after 5 6)
+(after 6 7)
+(after 7 8)
+(after 8 9)
+(after 9 10)
+(after 10 11)
+(after 11 12)
+(after 12 13)
+(after 13 14)
+(after 14 15)
+(after 15 16)
+(after 16 17)
+(after 17 18)
+(after 18 19)
+(after 19 20)
+(after 20 21)
+(after 21 22)
+(after 22 23)
+(after 23 24)
+(after 24 25)
+(after 25 26)
+(after 26 27)
+(after 27 28)
+(after 28 29)
+(after 29 30)

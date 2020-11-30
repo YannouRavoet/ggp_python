@@ -13,7 +13,7 @@ class MCTSPlayerII(GamePlayerII):
         self.root_nodes = None
         self.max_root_nodes = 10  # max number of root_nodes to keep track of (chosen randomly)
         self.expl_bias = expl_bias
-        self.rounds_per_loop = 5
+        self.rounds_per_loop = 50
 
         self.action_hist = list()
         self.percept_hist = list()
@@ -38,16 +38,18 @@ class MCTSPlayerII(GamePlayerII):
             self.percept_hist.append(Percepts(self.role, args[1]))
             self.update_root_nodes()
 
+        loops = 0
         while True:
-            for root_node in self.root_nodes:
-                try:
-                    node = self.select(root_node)
-                    node = self.expand(node)
-                    goal_value = self.simulate(node, rounds=self.rounds_per_loop)
-                    self.backprop(node, goal_value, visits=self.rounds_per_loop)
-                except stopit.TimeoutException:
-                    self.simulator.engine.clear_stack()
-                    return self.action_choice()
+            try:
+                nodes = self.select(self.root_nodes)
+                nodes = self.expand(nodes)
+                goal_value = self.simulate(nodes, rounds=self.rounds_per_loop)
+                self.backprop(nodes, goal_value, visits=self.rounds_per_loop)
+                loops += self.rounds_per_loop * len(self.root_nodes)
+            except stopit.TimeoutException:
+                self.simulator.engine.clear_stack()
+                print(f"Ran {loops} MCTS loops...")
+                return self.action_choice()
 
     @stopit.threading_timeoutable()
     def player_stop(self, *args, **kwargs):
@@ -103,29 +105,42 @@ class MCTSPlayerII(GamePlayerII):
                     best_children.extend(children_nodes)
         return random.choice(best_children).jointaction.get_action(self.role)
 
-    # PHASE 1: Select best node to expand with UCB1 starting from a given node
-    def select(self, node):
-        while not node.has_unexplored_children() and not node.is_terminal():
-            best_jointaction = max(node.children, key=lambda ja: node.children[ja].UCB1(self.expl_bias))
-            node = node.get_child(best_jointaction)
-        return node
+    # PHASE 1: Select best nodes to expand with UCB1 starting from a given nodes
+    def select(self, nodes):
+        selected = list()
+        for node in nodes:
+            while not node.has_unexplored_children() and not node.is_terminal():
+                best_jointaction = max(node.children, key=lambda ja: node.children[ja].UCB1(self.expl_bias))
+                node = node.get_child(best_jointaction)
+            selected.append(node)
+        return selected
 
-    # PHASE 2: Expand the given node
-    def expand(self, node):
-        jointactions = node.unexplored_jointactions()
-        if len(jointactions) > 0:
-            childnode = self.make_node(parent=node, jointaction=jointactions[0])
-            node.children[jointactions[0]] = childnode
-            return childnode
-        return node  # terminal node
+    # PHASE 2: Expand the given nodes
+    def expand(self, nodes):
+        expanded = list()
+        for node in nodes:
+            jointactions = node.unexplored_jointactions()
+            if len(jointactions) > 0:
+                childnode = self.make_node(parent=node, jointaction=jointactions[0])
+                node.children[jointactions[0]] = childnode
+                expanded.append(childnode)
+            else:
+                expanded.append(node) # terminal node
+        return expanded
 
     # PHASE 3: Simulate a random game from the given node on
-    def simulate(self, node, rounds=1):
-        return self.simulator.simulate(node.state, self.role, rounds)
+    def simulate(self, nodes, rounds=1):
+        states = [node.state for node in nodes]
+        return self.simulator.simulate_states(states, self.role, rounds)
 
     # PHASE 4: Backpropagate the terminal value through the ancestor nodes
-    def backprop(self, node, value, visits=1):
+    def backprop_node(self, node, value, visits):
         if node is not None:
             node.nb_visit += visits
             node.total_goal += value
-            self.backprop(node.parent, value, visits)
+            self.backprop_node(node.parent, value, visits)
+
+    def backprop(self, nodes, values, visits):
+        for i in range(0, len(nodes)):
+            self.backprop_node(nodes[i], values[i], visits)
+

@@ -31,7 +31,7 @@ class Simulator(object):
         for role in self.player_roles():
             [[mn, mx]] = self.engine.query(query=Term('minmax_goals', *[role, Var('Min'), Var('Max')]),
                                            backend='swipl')
-            goalnorms[role] = goalnorm(int(mn), int(mx))
+            goalnorms[role] = goalnorm(float(mn), float(mx))
         return goalnorms
 
     def get_gametype(self):
@@ -86,7 +86,7 @@ class Simulator(object):
     def goal(self, state, role, norm=True):
         [goal] = self.engine.query(Term('goal_pl', *[state.to_term(), role, Var('Value')]),
                                    backend="swipl")
-        return self._goalnorm[role](int(goal)) if norm else int(goal)
+        return self._goalnorm[role](float(goal)) if norm else float(goal)
 
     def next_state(self, state, jointaction):
         [facts] = self.engine.query(Term('next_pl', *[state.to_term(), jointaction.to_term(), Var('NextState')]),
@@ -106,7 +106,7 @@ class Simulator(object):
         """
         [goal] = self.engine.query(query=Term('simulate', *[state.to_term(), role, Var('Value'), Constant(rounds)]),
                                    backend='swipl')
-        return self._goalnorm[role](int(goal)) if norm else int(goal)
+        return self._goalnorm[role](float(goal)) if norm else float(goal)
 
     """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
                                                     GDL-II
@@ -152,7 +152,7 @@ class Simulator(object):
                                                                     Var('Goal')]),
                                          backend="swipl")
 
-        return self._goalnorm[role](int(total_goal) / len(states)) if norm else int(total_goal) / len(states)
+        return self._goalnorm[role](float(total_goal) / len(states)) if norm else float(total_goal) / len(states)
 
     def filter_states_percepts_ii(self, states, jointactions, role, percepts):
         [indices] = self.engine.query(query=Term('filter_states_percepts', *[list2term([s.to_term() for s in states]),
@@ -170,4 +170,13 @@ class Simulator(object):
                                                                         role,
                                                                         Var('AvgGoal')]),
                                   backend="swipl")
-        return self._goalnorm[role](int(avg)) if norm else int(avg)
+        return self._goalnorm[role](float(avg)) if norm else float(avg)
+
+    def simulate_states(self, states, role, rounds, norm=True):
+        [values] = self.engine.query(query=Term('simulate_multi', *[list2term([s.to_term() for s in states]),
+                                                                    role,
+                                                                    Constant(rounds),
+                                                                    Var('Values')]),
+                                     backend="swipl")
+
+        return [self._goalnorm[role](float(goal)) if norm else float(goal) for goal in term2list(values)]

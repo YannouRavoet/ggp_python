@@ -221,3 +221,13 @@ avg_goal_from_history(ActionHist, PerceptHist, Role, Goal):-
     length(StatesOut, L),
     Goal is div(GoalSum, L).
 
+%simulate_multi/4 runs Rounds iterations of simulation on each of the provided states and returns a list of values
+%for each of the provided States.
+simulate_multi(States, Role, Rounds, Values):-
+    simulate_multi(States, Role, Rounds, [], Values).
+
+simulate_multi([],_,_,TempValues, Values):-
+    reverse(TempValues, Values).
+simulate_multi([StatesH|StatesT],Role,Rounds,TempValues, Values):-
+    simulate(StatesH, Role, Value, Rounds),
+    simulate_multi(StatesT, Role, Rounds, [Value|TempValues], Values).

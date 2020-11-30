@@ -4,14 +4,19 @@ import argparse
 from gamemanager import GameManager, Player
 
 games = {
+    # GDL
     "tictactoe": "tictactoe.gdl",
     "connectfour": "connectfour.gdl",
-    "snake": "snake2p.gdl",
     "chess": "chess.gdl",
-    "blockworld": "blocksworlds.gdl",
+    "blocks": "blocks.gdl",
+    "blocks2p": "blocks2p.gdl",
+    "bomberman": "bomberman.gdl",
+    # GDL-II
     "montyhallproblem": "montyhall.gdl",
     "kriegtictactoe": "kriegtictactoe.gdl",
-    "meier": "meier.gdl"
+    "meier": "meier.gdl",
+    "transit": "transit.gdl",
+    "stratego": "stratego.gdl"
 }
 
 if __name__ == "__main__":
