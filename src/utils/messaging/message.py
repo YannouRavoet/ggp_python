@@ -1,5 +1,5 @@
 import re
-from problog.logic import Term, term2list
+from utils.prolog.prolog import PrologEngine
 from utils.messaging.message_type import MessageType
 
 
@@ -7,6 +7,8 @@ class Message:
     def __init__(self, messagetype, args=None):
         self.type = messagetype
         self.args = args
+        # args are of str/int/list<str;int> format
+        # processing into Actions, JointAction, Percepts is tasked to the manager/player.
 
     def __repr__(self):
         return str(self)
@@ -37,9 +39,9 @@ class Message:
         elif message == "done":
             return Message(MessageType.DONE)
         elif message.startswith("start"):
-            m = re.match(r"start\((\w*), (\w*), ([\w\s|\\,?()\[\]{}<=+]*), ([0-9]*), ([0-9]*)\)", message)
+            m = re.match(r"start\((\w*), (\w*), ([\w\s|\\,?()\[\]{}<>=+]*), ([0-9]*), ([0-9]*)\)", message)
             matchID = m.group(1)
-            role = Term.from_string(m.group(2))
+            role = m.group(2)
             rules = m.group(3)
             startclock = int(m.group(4))
             playclock = int(m.group(5))
@@ -48,25 +50,27 @@ class Message:
             m = re.match(r"play\((\w*), (\[.*])\)", message)
             if m is not None:
                 matchID = m.group(1)
-                jointaction = term2list(Term.from_string(m.group(2)))
-                return Message(MessageType.PLAY, args=[matchID, jointaction])
+                actions = PrologEngine.string2list(m.group(2))
+                return Message(MessageType.PLAY, args=[matchID, actions])
             else:
-                m = re.match(r"play\((\w*), (.*), (\[.*])\)", message)
+                m = re.match(r"play\((\w*), ([0-9]*), (.*), (\[.*])\)", message)
                 matchID = m.group(1)
-                action = Term.from_string(m.group(2)) if m.group(2) != "None" else None
-                percepts = term2list(Term.from_string(m.group(3)))
-                return Message(MessageType.PLAY_II, args=[matchID, action, percepts])
+                round = m.group(2)
+                action = m.group(3)
+                percepts = PrologEngine.string2list(m.group(4))
+                return Message(MessageType.PLAY_II, args=[matchID, round, action, percepts])
         elif message.startswith("stop"):
             m = re.match(r"stop\((\w*), (\[.*])\)", message)
             if m is not None:
                 matchID = m.group(1)
-                jointaction = term2list(Term.from_string(m.group(2)))
-                return Message(MessageType.STOP, args=[matchID, jointaction])
+                actions = PrologEngine.string2list(m.group(2))
+                return Message(MessageType.STOP, args=[matchID, actions])
             else:
-                m = re.match(r"stop\((\w*), (.*), (\[.*])\)", message)
+                m = re.match(r"stop\((\w*), ([0-9]*), (.*), (\[.*])\)", message)
                 matchID = m.group(1)
-                action = Term.from_string(m.group(2))
-                percepts = term2list(Term.from_string(m.group(3)))
-                return Message(MessageType.STOP_II, args=[matchID, action, percepts])
+                round = m.group(2)
+                action = m.group(3)
+                percepts = PrologEngine.string2list(m.group(4))
+                return Message(MessageType.STOP_II, args=[matchID, round, action, percepts])
         else:
-            return Message(MessageType.ACTION, args=[Term.from_string(message)])
+            return Message(MessageType.ACTION, args=[message])

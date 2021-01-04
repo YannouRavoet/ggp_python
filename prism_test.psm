@@ -1,0 +1,17 @@
+action_effects(robot, move_up, [move_up, move_right, move_left], [0.8, 0.1, 0.1]):-
+    legal(robot, move_up),
+    legal(robot, move_right),
+    legal(robot, move_left).
+
+action_effects(robot, move_up, [move_up, move_right], [0.85, 0.15]):-
+    legal(robot, move_up),
+    legal(robot, move_right),
+    not(legal(robot, move_left)).
+
+get_determ_action(Role, Action, DetermAction):-
+    action_effects(Role, Action, Effects, Probs),
+    values(switch, Effects, fix@Probs),
+    msw(switch, DetermAction).
+
+
+values(test_switch, [A, B], fix@[0.5,0.5]).

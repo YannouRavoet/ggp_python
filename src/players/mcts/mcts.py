@@ -1,25 +1,30 @@
 import random
+from typing import Dict
 
 import stopit
 from math import sqrt, log
 from gameplayer import GamePlayer
+from utils.ggp.jointaction import JointAction
+from utils.ggp.state import State
 
 
 class MCTSNode:
     """MCTSNode represents a node in a MCTS built game-tree."""
 
     def __init__(self, parent, parent_jointaction, state, child_jointactions):
-        self.parent = parent  # parent node in the game tree
-        self.jointaction = parent_jointaction  # JointAction made from parent to reach this node
-        self.state = state  # State of this node
-        self.nb_visit = 0  # nb of times the node was visited
-        self.total_goal = 0  # sum of goal values the node has resulted in
-        self.children = dict()  # Jointactions and their corresponding child nodes
+        self.parent: MCTSNode = parent  # parent node in the game tree
+        self.jointaction: JointAction = parent_jointaction  # JointAction made from parent to reach this node
+        self.state: State = state  # State of this node
+        self.nb_visit: int = 0  # nb of times the node was visited
+        self.total_goal: float = 0  # sum of goal values the node has resulted in
+        self.children: Dict[JointAction, MCTSNode] = dict()  # Jointactions and their corresponding child nodes
 
         for joint_action in child_jointactions:
             self.children[joint_action] = None
 
     def get_child(self, jointaction):
+        if isinstance(jointaction, list):
+            return None
         return self.children[jointaction]
 
     def explored_children(self):
@@ -82,9 +87,9 @@ class MCTSPlayer(GamePlayer):
 
     def __init__(self, port, expl_bias=2):
         super().__init__(port)
-        self.root_node = None  # root node of the game tree
-        self.expl_bias = expl_bias  # exploration bias to use with UCB1
-        self.rounds_per_loop = 50  # simulation rounds per expansion
+        self.root_node: MCTSNode = None  # root node of the game tree
+        self.expl_bias: float = expl_bias  # exploration bias to use with UCB1
+        self.rounds_per_loop: int = 100  # simulation rounds per expansion
 
     def make_node(self, parent, jointaction, state=None):
         if state is None:
@@ -99,7 +104,7 @@ class MCTSPlayer(GamePlayer):
     @stopit.threading_timeoutable()
     def player_play(self, first_round, *args, **kwargs):
         if not first_round:
-            jointaction = self.simulator.actions_2_jointaction(args[0])
+            jointaction = args[0]
             self.update_root_node(jointaction)
 
         loops = 0
@@ -111,22 +116,23 @@ class MCTSPlayer(GamePlayer):
                 self.backprop(node, goal_value, visits=self.rounds_per_loop)
                 loops += self.rounds_per_loop
             except stopit.TimeoutException:
-                self.simulator.engine.clear_stack()
                 print(f"Ran {loops} loops of MCTS")
+                self.root_node.print(self.expl_bias)
                 return self.action_choice()
 
     @stopit.threading_timeoutable()
     def player_stop(self, *args, **kwargs):
-        jointaction = self.simulator.actions_2_jointaction(args[0])
+        jointaction = args[0]
         self.update_root_node(jointaction)
         return self.simulator.goal(self.root_node.state, self.role)
 
     def update_root_node(self, jointaction):
         if self.root_node.get_child(jointaction) is None:  # child was not expanded yet
-            self.root_node = self.make_node(parent=None, jointaction=None)
+            state = self.simulator.next_state(self.root_node.state, jointaction)
+            self.root_node = self.make_node(parent=None, jointaction=None, state=state)
         else:
             self.root_node = self.root_node.get_child(jointaction)
-            self.root_node.parent = None
+            self.root_node.parent = None    # remove parent to stop backtracking at new root
 
     def action_choice(self):
         best_children = self.root_node.children_maxAVG()

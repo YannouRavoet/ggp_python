@@ -1,9 +1,6 @@
 import stopit
 import random
 from gameplayer import GamePlayerII
-from utils.ggp.percepts import Percepts
-from utils.ggp.action import Action
-from utils.pretty_print import PrettyPrinterFactory
 
 
 class RandomPlayerII(GamePlayerII):
@@ -22,11 +19,11 @@ class RandomPlayerII(GamePlayerII):
 
     def update_states(self):
         self.states = random.choices(
-            self.simulator.update_states_ii(self.states, self.action_hist[-1], self.percept_hist[-1], filter_terminal=True),
+            self.simulator.update_states_ii(self.states, self.action_hist[-1], self.percept_hist[-1], filter_terminal=False),
             k=self.max_states)
         if len(self.states) == 0:
             self.states = random.choices(
-                self.simulator.create_valid_states_ii(self.action_hist, self.percept_hist, filter_terminal=True),
+                self.simulator.create_valid_states_ii(self.action_hist, self.percept_hist, filter_terminal=False),
                 k=self.max_states)
 
     @stopit.threading_timeoutable()
@@ -36,13 +33,13 @@ class RandomPlayerII(GamePlayerII):
     @stopit.threading_timeoutable()
     def player_play(self, first_round, *args, **kwargs):
         if not first_round:
-            self.action_hist.append(Action(self.role, args[0]))
-            self.percept_hist.append(Percepts(self.role, args[1]))
+            self.action_hist.append(args[0])
+            self.percept_hist.append(args[1])
             self.update_states()
         return random.choice(self.simulator.legal_actions(random.choice(self.states), self.role))
 
     @stopit.threading_timeoutable()
     def player_stop(self, *args, **kwargs):
-        self.action_hist.append(Action(self.role, args[0]))
-        self.percept_hist.append(Percepts(self.role, args[1]))
+        self.action_hist.append(args[0])
+        self.percept_hist.append(args[1])
         return self.simulator.avg_goal_from_hist(self.action_hist, self.percept_hist, self.role)

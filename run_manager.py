@@ -1,13 +1,15 @@
 import sys
-sys.path.append("/home/yannou/git/ggp_problog/src")
+sys.path.append("/home/yannou/git/ggp_python/src")
 import argparse
 from gamemanager import GameManager, Player
 
 games = {
     # GDL
+    "maze": "maze.gdl",
+    "mazemedium": "mazemedium.gdl",
+    "mazebig": "mazebig.gdl",
     "tictactoe": "tictactoe.gdl",
     "connectfour": "connectfour.gdl",
-    "chess": "chess.gdl",
     "blocks": "blocks.gdl",
     "blocks2p": "blocks2p.gdl",
     "bomberman": "bomberman.gdl",

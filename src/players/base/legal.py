@@ -15,12 +15,12 @@ class LegalPlayer(GamePlayer):
     @stopit.threading_timeoutable()
     def player_play(self, first_round, *args, **kwargs):
         if not first_round:
-            jointaction = self.simulator.actions_2_jointaction(args[0])
+            jointaction = args[0]
             self.state = self.simulator.next_state(self.state, jointaction)
         return self.simulator.legal_actions(self.state, self.role)[0]
 
     @stopit.threading_timeoutable()
     def player_stop(self, *args, **kwargs):
-        jointaction = self.simulator.actions_2_jointaction(args[0])
+        jointaction = args[0]
         self.state = self.simulator.next_state(self.state, jointaction)
         return self.simulator.goal(self.state, self.role)

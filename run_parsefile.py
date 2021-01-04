@@ -1,6 +1,6 @@
 import argparse
 
-from utils.gdl import read_rules, gdlstring2problogterms, write_rules
+from utils.gdl import read_rules, write_rules, gdl2prolog
 
 if __name__ == "__main__":
 
@@ -10,5 +10,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     gdl_rules = read_rules(f'../games/{args.game}.gdl')
-    problog_rules = gdlstring2problogterms(gdl_rules)
-    write_rules(f'../games/{args.game}.pl', problog_rules)
+    prolog_rules = gdl2prolog(gdl_rules)
+    write_rules(f'../games/{args.game}.pl', prolog_rules)
+
+    dynamics = read_rules(f'../src/utils/prolog/dynamics.pl', cmt_token='%')
+    ggp = read_rules(f'../src/utils/prolog/ggp.pl', cmt_token='%')
+
+    test = '\n'.join([prolog_rules, ggp, dynamics])
+    write_rules('../test.pl', test)

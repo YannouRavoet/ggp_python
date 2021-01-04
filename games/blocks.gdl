@@ -5,110 +5,119 @@
 ;;; ROLE
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-  (role robot)
+(role robot)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; BASE
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(base (on ?b ?t))
+(base (table_top ?t))
+(base (clear ?t))
+(base (step ?s))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; INIT Relations
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-  (init (clear b))
-  (init (clear c))
+(init (clear b))
+(init (clear c))
 
-  (init (on c a))
+(init (on c a))
 
-  (init (table a))
-  (init (table b))
+(init (table_top a))
+(init (table_top b))
 
-  (init (step 1))
+(init (step 1))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; NEXT Relations
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-  (<= (next (on ?x ?y))
-      (does robot (s ?x ?y)))
+(<= (next (on ?x ?y))
+    (does robot (s ?x ?y)))
 
-  (<= (next (on ?x ?y))
-      (does robot (s ?u ?v))
-      (true (on ?x ?y)))
+(<= (next (on ?x ?y))
+    (does robot (s ?u ?v))
+    (true (on ?x ?y)))
 
-  (<= (next (table ?x))
-      (does robot (s ?u ?v))
-      (true (table ?x))
-      (distinct ?u ?x))
+(<= (next (table_top ?x))
+    (does robot (s ?u ?v))
+    (true (table_top ?x))
+    (distinct ?u ?x))
 
-  (<= (next (clear ?y))
-      (does robot (s ?u ?v))
-      (true (clear ?y))
-      (distinct ?v ?y))
-
-
-  (<= (next (on ?x ?y))
-      (does robot (u ?u ?v))
-      (true (on ?x ?y))
-      (distinct ?u ?x))
-
-  (<= (next (table ?x))
-      (does robot (u ?x ?y)))
-
-  (<= (next (table ?x))
-      (does robot (u ?u ?v))
-      (true (table ?x)))
-
-  (<= (next (clear ?y))
-      (does robot (u ?x ?y)))
-
-  (<= (next (clear ?x))
-      (does robot (u ?u ?v))
-      (true (clear ?x)))
+(<= (next (clear ?y))
+    (does robot (s ?u ?v))
+    (true (clear ?y))
+    (distinct ?v ?y))
 
 
-  (<= (next (step ?y))
-      (true (step ?x))
-      (succ ?x ?y))
+(<= (next (on ?x ?y))
+    (does robot (u ?u ?v))
+    (true (on ?x ?y))
+    (distinct ?u ?x))
 
-  (succ 1 2)
-  (succ 2 3)
-  (succ 3 4)
+(<= (next (table_top ?x))
+    (does robot (u ?x ?y)))
+
+(<= (next (table_top ?x))
+    (does robot (u ?u ?v))
+    (true (table_top ?x)))
+
+(<= (next (clear ?y))
+    (does robot (u ?x ?y)))
+
+(<= (next (clear ?x))
+    (does robot (u ?u ?v))
+    (true (clear ?x)))
+
+
+(<= (next (step ?y))
+    (true (step ?x))
+    (succ ?x ?y))
+
+(succ 1 2)
+(succ 2 3)
+(succ 3 4)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; LEGAL Relations
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-  (<= (legal robot (s ?x ?y))
-      (true (clear ?x))
-      (true (table ?x))
-      (true (clear ?y))
-       (distinct ?x ?y))
+(<= (legal robot (s ?x ?y))
+    (true (clear ?x))
+    (true (table_top ?x))
+    (true (clear ?y))
+     (distinct ?x ?y))
 
-  (<= (legal robot (u ?x ?y))
-      (true (clear ?x))
-      (true (on ?x ?y)))
+(<= (legal robot (u ?x ?y))
+    (true (clear ?x))
+    (true (on ?x ?y)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; GOAL Relations
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-  (<= (goal robot 100)
-      (true (on a b))
-      (true (on b c)))
+(<= (goal robot 100)
+    (true (on a b))
+    (true (on b c)))
 
-  (<= (goal robot 0)
-      (not (true (on a b))))
+(<= (goal robot 0)
+    (not (true (on a b))))
 
-  (<= (goal robot 0)
-      (not (true (on b c))))
+(<= (goal robot 0)
+    (not (true (on b c))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; TERMINAL Relations
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-  (<= terminal
-      (true (step 4)))
+(<= terminal
+    (true (step 4)))
 
-  (<= terminal
-      (true (on a b))
-      (true (on b c)))
+(<= terminal
+    (true (on a b))
+    (true (on b c)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

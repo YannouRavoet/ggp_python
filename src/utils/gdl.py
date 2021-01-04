@@ -10,14 +10,6 @@ from pyparsing import (
     printables,
     quotedString,
 )
-from problog.logic import (
-    Term,
-    Clause,
-    Var,
-    Or,
-    Constant,
-    Not
-)
 
 
 class GDLParser:
@@ -49,7 +41,7 @@ class GDLParser:
         self.statements = Group(ZeroOrMore(self.statement))('statements')
 
 
-class GDLtoProbLogParser(GDLParser):
+class GDL2ProLogParser(GDLParser):
     def __init__(self):
         super().__init__()
         self.variable.addParseAction(self._variable_action)
@@ -59,16 +51,12 @@ class GDLtoProbLogParser(GDLParser):
         self.statements.addParseAction(self._statements_action)
 
     @staticmethod
-    def _variable_action(toks):
-        return Var('_' + toks.variable[0])
-
-    @staticmethod
-    def _statement_action(toks):
-        return toks.statement
-
-    @staticmethod
     def _constant_action(toks):
-        return Constant(toks.constant)
+        return toks.constant
+
+    @staticmethod
+    def _variable_action(toks):
+        return f"_{toks.variable[0]}"
 
     @staticmethod
     def _compound_term_action(toks):
@@ -77,26 +65,29 @@ class GDLtoProbLogParser(GDLParser):
 
         if name == '<=':
             head = args[0]
-            body = reduce(lambda b, a: a & b, reversed(args[1:]))
-            return Clause(head, body)
+            body = ',\n\t'.join(args[1:])
+            return f"{head}:-\n\t{body}"
         else:
-            args = [Var(arg) for arg in args]
             if name == 'not':
-                return Not('\+', args[0])
+                return f"\+{args[0]}"
             elif name == 'true':
                 return args[0]
-            return Term(name, *args)
+            return f"{name}({', '.join(args)})"
+
+    @staticmethod
+    def _statement_action(toks):
+        return f"{toks.statement}."
 
     @staticmethod
     def _statements_action(toks):
-        return list(toks.statements)
+        return toks.statements
 
 
 def read_rules(file, cmt_token=';'):
     """
     Reads game rules, ignores comments.
     :param file: path to input file
-    :return: string of game rules; each separated by \n
+    :return: str of game rules; each separated by \n
     """
     with open(file) as f:
         rules = '\n'.join(line for line in (line.strip() for line in f.readlines())
@@ -104,30 +95,17 @@ def read_rules(file, cmt_token=';'):
     return rules
 
 
-def write_rules(output_file, problogterms):
+def write_rules(output_file, rules):
     """
     Writes a list of problog terms onto a designated output file.
     :param output_file: path to output file
-    :param problogterms: list of Problog Term
+    :param rules: str of game rules; each separated by \n
     :return: None
     """
     with open(output_file, 'w') as f:
-        f.write(problogterms2problogstring(problogterms))
+        f.write(rules)
 
 
-def gdlstring2problogterms(gdl_rules):
-    """
-    Parses into a ProbLog term representing a Prolog list
-    :param gdl_rules: a string of gdl_rules in KIF format (Knowledge Interchange Format)
-    :return: ProbLog term representing a Prolog list
-    """
-    problogterms = list(GDLtoProbLogParser().statements.parseString(gdl_rules, parseAll=True))
-    return list(filter(lambda t: t.functor != 'succ', problogterms))
-
-
-def problogterms2problogstring(problogterms):
-    return '\n'.join([str(term) + '.' for term in problogterms])
-
-
-def gdlstring2problogstring(gdl_rules):
-    return problogterms2problogstring(gdlstring2problogterms(gdl_rules))
+def gdl2prolog(gdl_rules):
+    statements = list(GDL2ProLogParser().statements.parseString(gdl_rules, parseAll=True))
+    return '\n'.join(list(filter(lambda s: not s.startswith('succ('), statements)))

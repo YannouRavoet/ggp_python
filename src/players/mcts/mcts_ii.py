@@ -3,17 +3,15 @@ import random
 import stopit
 from gameplayer import GamePlayerII
 from players.mcts.mcts import MCTSNode
-from utils.ggp.action import Action
-from utils.ggp.percepts import Percepts
 
 
 class MCTSPlayerII(GamePlayerII):
     def __init__(self, port, expl_bias=2):
         super().__init__(port)
         self.root_nodes = None
-        self.max_root_nodes = 10  # max number of root_nodes to keep track of (chosen randomly)
+        self.max_root_nodes = 100000  # max number of root_nodes to keep track of (chosen randomly)
         self.expl_bias = expl_bias
-        self.rounds_per_loop = 50
+        self.max_rounds_per_loop = 100
 
         self.action_hist = list()
         self.percept_hist = list()
@@ -34,27 +32,27 @@ class MCTSPlayerII(GamePlayerII):
     @stopit.threading_timeoutable()
     def player_play(self, first_round, *args, **kwargs):
         if not first_round:
-            self.action_hist.append(Action(self.role, args[0]))
-            self.percept_hist.append(Percepts(self.role, args[1]))
+            self.action_hist.append(args[0])
+            self.percept_hist.append(args[1])
             self.update_root_nodes()
 
+        rounds_per_loop = max(int(self.max_rounds_per_loop / len(self.root_nodes)), 1)
         loops = 0
         while True:
             try:
                 nodes = self.select(self.root_nodes)
                 nodes = self.expand(nodes)
-                goal_value = self.simulate(nodes, rounds=self.rounds_per_loop)
-                self.backprop(nodes, goal_value, visits=self.rounds_per_loop)
-                loops += self.rounds_per_loop * len(self.root_nodes)
+                goal_value = self.simulate(nodes, rounds=self.max_rounds_per_loop)
+                self.backprop(nodes, goal_value, visits=self.max_rounds_per_loop)
+                loops += rounds_per_loop * len(self.root_nodes)
             except stopit.TimeoutException:
-                self.simulator.engine.clear_stack()
                 print(f"Ran {loops} MCTS loops...")
                 return self.action_choice()
 
     @stopit.threading_timeoutable()
     def player_stop(self, *args, **kwargs):
-        self.action_hist.append(Action(self.role, args[0]))
-        self.percept_hist.append(Percepts(self.role, args[1]))
+        self.action_hist.append(args[0])
+        self.percept_hist.append(args[1])
         return self.simulator.avg_goal_from_hist(self.action_hist, self.percept_hist, self.role)
 
     def update_root_nodes(self):

@@ -1,11 +1,12 @@
 import sys
 
-sys.path.append("/home/yannou/git/ggp_problog/src")
+sys.path.append("/home/yannou/git/ggp_python/src")
 import argparse
 from players.mcts import mcts, mcts_ii
-from players.base import random, random_ii, legal, legal_ii
+from players.base import random, random_ii, legal, legal_ii, human
 
 playerClasses = {
+    'human': human.HumanPlayer,
     'legal': legal.LegalPlayer,
     'random': random.RandomPlayer,
     'mcts': mcts.MCTSPlayer,
@@ -21,17 +22,19 @@ if __name__ == "__main__":
     DEFAULT_PORT = 5601
 
     parser = argparse.ArgumentParser()
+    parser.add_argument('-p', '--port', dest='port', type=int, default=DEFAULT_PORT,
+                        help='port to listen to')
     parser.add_argument('-cls', '--playerclass', dest='playerclass', type=str, required=True,
                         choices=list(playerClasses.keys()),
                         help='player class to implement')
-    parser.add_argument('-p', '--port', dest='port', type=int, default=DEFAULT_PORT,
-                        help='port to listen to')
+    parser.add_argument('-pargs', '--playerargs', dest='playerargs', type=str, nargs='*', required=False,
+                        help='arguments to be passed to the playerclass constructor')
     args = parser.parse_args()
 
     """""""""""""""
     RUN GAMEPLAYER
     """""""""""""""
-    player = playerClasses[args.playerclass](args.port)
+    player = playerClasses[args.playerclass](args.port, args.playerargs)
     try:
         player.serve_forever()
     except KeyboardInterrupt:
