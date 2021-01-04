@@ -6,15 +6,13 @@ from gameplayer import GamePlayer
 from utils.ggp.state import State
 from utils.pretty_print import PrettyPrinterFactory, PrettyPrinter
 
+GAME_FILE = 'maze.gdl'
 
 class HumanPlayer(GamePlayer, ABC):
-    def __init__(self, port, args):
-        super().__init__(port, args)
+    def __init__(self, port):
+        super().__init__(port)
         self.state: State = None
-        if args is not None:
-            self.pretty_printer: PrettyPrinter = PrettyPrinterFactory.make_printer(str(args[0]))
-        else:
-            self.pretty_printer: PrettyPrinter = None
+        self.pretty_printer: PrettyPrinter = PrettyPrinterFactory.make_printer(GAME_FILE)
 
     @stopit.threading_timeoutable()
     def player_start(self):

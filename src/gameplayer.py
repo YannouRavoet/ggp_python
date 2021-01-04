@@ -14,9 +14,8 @@ from utils.messaging.message_handler import MessageHandler
 
 
 class GamePlayer(HTTPServer, ABC):
-    def __init__(self, port, args=None):
+    def __init__(self, port):
         HTTPServer.__init__(self, ('', port), MessageHandler)
-        self.args = args
         self.matchInfo = None
         self.simulator = None
         self.role = None
@@ -64,7 +63,7 @@ class GamePlayer(HTTPServer, ABC):
         jointaction = self.simulator.actions_2_jointaction(actions)
         goal_value = self.player_stop(jointaction, timeout=self.clock_left())
         self.matchInfo.add_result(self.role, goal_value)
-        self.__init__(self.server_port, self.args)
+        self.__init__(self.server_port)
         return Message(MessageType.DONE)
 
     """""""""

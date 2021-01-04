@@ -127,7 +127,10 @@ class GameManager(HTTPServer):
             raise NotImplementedError  # TODO: implement stochastic action message
 
         response_msg = self.send_message(player, msg)
-        player.set_action(response_msg.args[0])
+        if response_msg is None:
+            player.set_action("noop")
+        else:
+            player.set_action(response_msg.args[0])
 
     def send_stop(self, matchID, player):
         if not self.matches[matchID].matchInfo.settings.has_imperfect_information \

@@ -43,9 +43,10 @@ class MCTSNode:
         return len(self.children) == 0
 
     def UCB1(self, bias):
-        return (self.total_goal / self.nb_visit) + bias * sqrt(log(self.parent.nb_visit) / self.nb_visit) \
-            if self.nb_visit != 0 and self.parent is not None \
-            else 0
+        if self.nb_visit != 0 and self.parent is not None:
+            return (self.total_goal / self.nb_visit) + bias * sqrt(log(self.parent.nb_visit) / self.nb_visit)
+        else:
+            return 0
 
     def AVG(self):
         return self.total_goal / self.nb_visit \
