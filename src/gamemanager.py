@@ -7,7 +7,7 @@ from http.server import HTTPServer
 from http.client import HTTPConnection
 from typing import List, Dict
 
-from utils.gdl import read_rules
+from utils.gdl_parser import read_rules
 from utils.ggp.state import State
 from utils.messaging.message import Message
 from utils.messaging.message_type import MessageType

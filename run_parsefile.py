@@ -1,6 +1,6 @@
 import argparse
 
-from utils.gdl import read_rules, write_rules, gdl2prolog
+from utils.gdl_parser import read_rules, write_rules, gdl2prolog
 
 if __name__ == "__main__":
 

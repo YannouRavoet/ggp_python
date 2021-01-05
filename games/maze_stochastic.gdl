@@ -129,6 +129,30 @@
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; ACTION EFFECTS
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; MOVE UP
+(<= (action_effects robot move_up [move_up, move_right, move_left] [0.8,0.1,0.1])
+    (legal robot move_up)
+    (legal robot move_right)
+    (legal robot move_left))
+
+(<= (action_effects robot move_up [move_up, move_right] [0.85,0.15])
+    (legal robot move_up)
+    (legal robot move_right)
+    (not (legal robot move_left)))
+
+(<= (action_effects robot move_up [move_up, move_left] [0.85,0.15])
+    (legal robot move_up)
+    (legal robot move_left)
+    (not (legal robot move_right)))
+
+(<= (action_effects robot move_up [move_up] [1])
+    (legal robot move_up)
+    (not (legal robot move_right))
+    (not (legal robot move_left)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; GOAL
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

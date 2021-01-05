@@ -1,17 +1,81 @@
-action_effects(robot, move_up, [move_up, move_right, move_left], [0.8, 0.1, 0.1]):-
+% action_effects/4 is what is programmed in the gdl rules.
+% HEAD says if this role tries this action, these are the possible effects with these probabilities.
+% BODY sets the constraints such that there is always exactly one that is true.
+action_effects(robot, move_up, [does(robot, move_up), does(robot, move_right), does(robot, move_left)], [0.8, 0.1, 0.1]):-
     legal(robot, move_up),
     legal(robot, move_right),
     legal(robot, move_left).
 
-action_effects(robot, move_up, [move_up, move_right], [0.85, 0.15]):-
+action_effects(robot, move_up, [does(robot, move_up),  does(robot, move_right)], [0.85, 0.15]):-
     legal(robot, move_up),
     legal(robot, move_right),
     not(legal(robot, move_left)).
 
-get_determ_action(Role, Action, DetermAction):-
+action_effects(robot, move_up, [does(robot, move_up), does(robot, move_left)], [0.85, 0.15]):-
+    legal(robot, move_up),
+    legal(robot, move_left),
+    not(legal(robot, move_right)).
+
+action_effects(robot, move_up, [does(robot, move_up)], [1]):-
+    legal(robot, move_up),
+    not(legal(robot, move_left)),
+    not(legal(robot, move_right)).
+
+% THERE IS ONE BIG CONSTRAINT ON THIS:
+% AT ANY CALL: there must be EXACTLY ONE actions_effects/4 rule that is satisfied.
+values(determ_action(Role, Action), Effects):-
+    action_effects(Role, Action, Effects, _). %can't set the probabilities in the same call
+                                              %(you can however, set them in a separate call)
+
+
+% TRIED AND FAILS TO SET PROBS (AS STATED IN MANUAL)
+values(determ_action(Role, Action), Effects, Probs):-
+    action_effects(Role, Action, Effects, Probs).
+
+% TRIED AND LOOPS
+values(determ_action(Role, Action), Effects, Probs):-
     action_effects(Role, Action, Effects, Probs),
-    values(switch, Effects, fix@Probs),
-    msw(switch, DetermAction).
+    set_sw(determ_action(Role, Action), Probs).
 
 
-values(test_switch, [A, B], fix@[0.5,0.5]).
+% lets test if you can assert and sample switches at runtime
+get_determ_action(Role, Action, DetermAction):-
+    msw(determ_action(Role, Action), DetermAction).
+
+update_probabilities(Role, Action):-
+    action_effects(Role, Action, _, Probs),
+    set_sw(determ_action(Role, Action), Probs).
+
+%ALTERNATIVE: update probs of all switches
+update_probabilities :-
+    action_effects(Role, Action, _, Probs),
+    set_sw(determ_action(Role, Action), Probs).
+
+up_right :-
+    assertz(legal(robot, move_up)),
+    assertz(legal(robot, move_right)).
+
+%% create_switches/1 searches all action_effects and creates a switch for each return a list of switch prints.
+%% For example: Switches = [values(name, [effects], fix@[probs]), values(...)]
+%% these can then be written to a .psm file
+%
+%% PROBLEM: there can be multiple switches with the same name...
+%% so either require an extra argument for action_effects (unique name) or keep an internal list of references between
+%% switch names(random) and action_effects.
+%create_switches(Switches) :-
+%    fail.
+%
+%
+%%also you need to call a switch "prism(msw(test_switch,V))" before the switch is activated?? and sw_values(test_switch, V) returns anything.
+%values(test_switch, [a, b]).
+%
+%% what this really does is only create the switch when terminal is true. Returns an error when terminal is false.
+%% but this is still perfect if we constrain the rules such that at any call, exactly one of the switches must have its constraints met.
+%% if multiple switches have their constraints met, it will simply sample the first valid switch.
+%values(test_switch_constr, [a, b], fix@[0.9,0.1]):-
+%    terminal.
+%
+%values(test_switch_constr, [b]):-
+%    terminal.
+%
+%values(switch_bool, [true, false]).

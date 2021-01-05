@@ -1,6 +1,6 @@
 import tempfile
 from pyswip import Prolog
-from utils.gdl import gdl2prolog
+from utils.gdl_parser import gdl2prolog
 
 
 class PrologEngine:
