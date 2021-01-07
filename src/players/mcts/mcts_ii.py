@@ -42,8 +42,8 @@ class MCTSPlayerII(GamePlayerII):
             try:
                 nodes = self.select(self.root_nodes)
                 nodes = self.expand(nodes)
-                goal_value = self.simulate(nodes, rounds=self.max_rounds_per_loop)
-                self.backprop(nodes, goal_value, visits=self.max_rounds_per_loop)
+                goal_value = self.simulate(nodes, rounds=rounds_per_loop)
+                self.backprop(nodes, goal_value, visits=rounds_per_loop)
                 loops += rounds_per_loop * len(self.root_nodes)
             except stopit.TimeoutException:
                 print(f"Ran {loops} MCTS loops...")

@@ -39,7 +39,7 @@ class Message:
         elif message == "done":
             return Message(MessageType.DONE)
         elif message.startswith("start"):
-            m = re.match(r"start\((\w*), (\w*), ([\w\s|\\,?()\[\]{}<>=+]*), ([0-9]*), ([0-9]*)\)", message)
+            m = re.match(r"start\((\w*), (\w*), ([\w\s|\\,.?()\[\]{}<>=+]*), ([0-9]*), ([0-9]*)\)", message)
             matchID = m.group(1)
             role = m.group(2)
             rules = m.group(3)

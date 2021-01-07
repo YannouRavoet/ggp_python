@@ -3,7 +3,7 @@ import sys
 sys.path.append("/home/yannou/git/ggp_python/src")
 import argparse
 from players.mcts import mcts, mcts_ii
-from players.base import random, random_ii, legal, legal_ii, human
+from players.base import random, random_ii, legal, legal_ii, human, human_sto
 
 playerClasses = {
     'human': human.HumanPlayer,
@@ -13,6 +13,7 @@ playerClasses = {
     'legal_ii': legal_ii.LegalPlayerII,
     'random_ii': random_ii.RandomPlayerII,
     'mcts_ii': mcts_ii.MCTSPlayerII,
+    'human_sto': human_sto.HumanSTO
 }
 
 if __name__ == "__main__":

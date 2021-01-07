@@ -1,4 +1,3 @@
-from functools import reduce
 from pyparsing import (
     Forward,
     Group,
@@ -67,12 +66,13 @@ class GDL2ProLogParser(GDLParser):
             head = args[0]
             body = ',\n\t'.join(args[1:])
             return f"{head}:-\n\t{body}"
-        else:
-            if name == 'not':
-                return f"\+{args[0]}"
-            elif name == 'true':
-                return args[0]
-            return f"{name}({', '.join(args)})"
+        elif name == 'not':
+            return f"\+{args[0]}"
+        elif name == 'true':
+            return args[0]
+        elif name == 'list':
+            return f"[{', '.join(args)}]"
+        return f"{name}({', '.join(args)})"
 
     @staticmethod
     def _statement_action(toks):

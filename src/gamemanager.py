@@ -73,7 +73,8 @@ class Match(object):
 
     def set_deterministic_action(self):
         """ Turns stochastic player actions choices into a chosen deterministic action."""
-        return None
+        for pl in self.players:
+            pl.action = self.simulator.sample_effect(self.state, pl.action)
 
     def save_results(self):
         for pl in self.players:
@@ -118,13 +119,11 @@ class GameManager(HTTPServer):
         self.send_message(player, msg)
 
     def send_play(self, matchID, player):
-        if not self.matches[matchID].matchInfo.settings.has_imperfect_information \
-                and not self.matches[matchID].matchInfo.settings.has_stochastic_actions:
+        if not (self.matches[matchID].matchInfo.settings.has_imperfect_information
+                or self.matches[matchID].matchInfo.settings.has_stochastic_actions):
             msg = Message(MessageType.PLAY, args=[matchID, self.matches[matchID].get_jointaction()])
-        elif not self.matches[matchID].matchInfo.settings.has_stochastic_actions:
-            msg = Message(MessageType.PLAY_II, args=[matchID, self.matches[matchID].round, player.action, player.percepts])
         else:
-            raise NotImplementedError  # TODO: implement stochastic action message
+            msg = Message(MessageType.PLAY_II, args=[matchID, self.matches[matchID].round, player.action, player.percepts])
 
         response_msg = self.send_message(player, msg)
         if response_msg is None:
@@ -133,13 +132,11 @@ class GameManager(HTTPServer):
             player.set_action(response_msg.args[0])
 
     def send_stop(self, matchID, player):
-        if not self.matches[matchID].matchInfo.settings.has_imperfect_information \
-                and not self.matches[matchID].matchInfo.settings.has_stochastic_actions:
+        if not (self.matches[matchID].matchInfo.settings.has_imperfect_information
+                or self.matches[matchID].matchInfo.settings.has_stochastic_actions):
             msg = Message(MessageType.STOP, args=[matchID, self.matches[matchID].get_jointaction()])
-        elif not self.matches[matchID].matchInfo.settings.has_stochastic_actions:
-            msg = Message(MessageType.STOP_II, args=[matchID, self.matches[matchID].round, player.action, player.percepts])
         else:
-            raise NotImplementedError  # TODO: implement stochastic action message
+            msg = Message(MessageType.STOP_II, args=[matchID, self.matches[matchID].round, player.action, player.percepts])
         self.send_message(player, msg)
 
     """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -182,7 +179,7 @@ class GameManager(HTTPServer):
             self.thread_players(matchID, self.send_play)
             match.check_legality_of_player_actions()
 
-            # CALC ENVIRONMENT ACTION
+            # HANDLE GAME SETTINGS
             if match.matchInfo.settings.has_stochastic_actions:
                 match.set_deterministic_action()
             if match.matchInfo.settings.has_random:

@@ -1,3 +1,4 @@
+import os
 import time
 import stopit
 from http.server import HTTPServer
@@ -21,7 +22,7 @@ class GamePlayer(HTTPServer, ABC):
         self.role = None
 
         self.msg_time = None  # time at which last message was received
-        self.reply_buffer = 2  # nb seconds between ClockOverException and deadline of response
+        self.reply_buffer = 1  # nb seconds between ClockOverException and deadline of response
         self.reply_deadline = None  # time at which the manager needs an answer
 
     """""""""""
@@ -54,17 +55,21 @@ class GamePlayer(HTTPServer, ABC):
 
     def handle_play(self, matchID, actions, *args, **kwargs):
         self.set_reply_deadline(self.matchInfo.playclock)
-        jointaction = self.simulator.actions_2_jointaction(actions)
+        jointaction = self.simulator.actionlist2jointaction(actions)
         action = self.player_play(len(jointaction) == 0, jointaction, timeout=self.clock_left())
         return Message(MessageType.ACTION, [action])
 
     def handle_stop(self, matchID, actions, *args, **kwargs):
         self.set_reply_deadline(self.matchInfo.playclock)
-        jointaction = self.simulator.actions_2_jointaction(actions)
+        jointaction = self.simulator.actionlist2jointaction(actions)
         goal_value = self.player_stop(jointaction, timeout=self.clock_left())
         self.matchInfo.add_result(self.role, goal_value)
         self.__init__(self.server_port)
         return Message(MessageType.DONE)
+
+    @staticmethod
+    def clear_screen():
+        os.system('clear')
 
     """""""""
       TIMERS

@@ -18,7 +18,9 @@ games = {
     "kriegtictactoe": "kriegtictactoe.gdl",
     "meier": "meier.gdl",
     "transit": "transit.gdl",
-    "stratego": "stratego.gdl"
+    "stratego": "stratego.gdl",
+    # STO GDL
+    "maze_stochastic": "maze_stochastic.gdl"
 }
 
 if __name__ == "__main__":

@@ -77,10 +77,8 @@
    (does ?p (mark ?m ?n))
    (not (validmove ?p ?m ?n)))
 
-(<= (next (tried ?p ?m1 ?n1))
-   (true (tried ?p ?m1 ?n1))
-   (does ?p (mark ?m2 ?n2))
-   (not (validmove ?p ?m2 ?n2)))
+(<= (next (tried ?p ?m ?n))
+   (true (tried ?p ?m ?n)))
 
 (<= (next (step ?n))
    (true (step ?m))

@@ -86,7 +86,7 @@ class MCTSNode:
 class MCTSPlayer(GamePlayer):
     """MCTSPlayer builds a game tree using Monte-Carlo Tree Search with Upper Confidence Bound 1 (UCB1)."""
 
-    def __init__(self, port, expl_bias=2):
+    def __init__(self, port, expl_bias=3):
         super().__init__(port)
         self.root_node: MCTSNode = None  # root node of the game tree
         self.expl_bias: float = expl_bias  # exploration bias to use with UCB1
@@ -117,6 +117,7 @@ class MCTSPlayer(GamePlayer):
                 self.backprop(node, goal_value, visits=self.rounds_per_loop)
                 loops += self.rounds_per_loop
             except stopit.TimeoutException:
+                self.clear_screen()
                 print(f"Ran {loops} loops of MCTS")
                 self.root_node.print(self.expl_bias)
                 return self.action_choice()

@@ -1,0 +1,42 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                      Stochastic GDL Methods                                                          %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+clear_engine :-
+    setof(B, (base(B), B), StateFacts),
+    maplist(retractall,StateFacts),
+    maplist(retractall,does(_,_)).
+
+% sets the switches for sampling action effects
+% there is ONE constraint:
+% At the moment of a call, there must be EXACTLY ONE predicate action_effects(Role, Action, Effects, Probs) that is satisfied.
+% If multiple are satisfied, the first is used.
+% If none are satisfied, an error is returned.
+values(effect(Role, Action), Effects):-
+    effect(Role, Action, Effects, _).
+
+
+% samples the effect of a stochastic action in a given state and returns the effect.
+sample_effect(State, Role, Action, Effect):-
+    maplist(assertz, State),
+    effect(Role, Action, _, Probs), %get the probs
+    set_sw(effect(Role, Action), Probs), %update the probs (since this is not supported directly for non-ground switches.
+    msw(effect(Role, Action), Effect),  %sample the effect
+    maplist(retract, State), !.
+
+%maplist/2 is not included in B-prolog
+maplist(_, []).
+maplist(Cmd, [LH|LT]):-
+    call(Cmd, LH),
+    maplist(Cmd, LT).
+
+% succ/2 is a bit more tricky since we want to be able to use it both ways
+succ(A,B):-
+    (var(A) ->
+        ( var(B) ->
+            throw(error(instantiation_error, context(succ/2, '')))
+        ;
+            A is B - 1
+        )
+    ;
+        B is A +1
+    ).
