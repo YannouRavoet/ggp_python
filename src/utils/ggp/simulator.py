@@ -31,14 +31,14 @@ class SimulatorInterface:
                                                     GDL
     """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
-    def roles(self) -> List[str]:
+    def get_roles(self) -> List[str]:
         """
         returns a list of all roles as defined by *role/1*.
         WARNING: the list is ordered, so the order might not be the same as the original ruleset.
         :return: list of all roles in the game"""
         pass
 
-    def player_roles(self) -> List[str]:
+    def get_player_roles(self) -> List[str]:
         """
         returns a list of all roles played by GamePlayers.
         WARNING: the list is ordered, so the order might not be the same as the original ruleset.
@@ -128,6 +128,16 @@ class SimulatorInterface:
         :return: percepts of the player"""
         pass
 
+    def generate_jointaction_from_percepts(self, state: State, ownaction: Action, percepts: Percepts) -> JointAction:
+        """Tries to complete as much as possible of a jointaction in the State *state* that,
+        given the Action *ownaction* and Percepts *percepts* of the player calling the method, is valid.
+        :param state: state of the game in which to evaluate the percepts
+        :param ownaction: action of the player calling the method
+        :param percepts: percepts of the player calling the method
+        :param role: role of the player calling the method
+        :return: a list of facts that have to be true, for the percepts to be valid"""
+        pass
+
     def update_states_ii(self, states: List[State], action: Action, percepts: Percepts,
                          filter_terminal: bool = False) -> List[State]:
         """Creates a list of states that can be successor states to at least one State in *states* given Action
@@ -179,7 +189,7 @@ class SimulatorInterface:
         :return: average goal over the complete set of valid terminal states."""
         pass
 
-    def simulate_states(self, states: State, role: str, rounds: int, norm: bool = True) -> List[float]:
+    def simulate_states(self, states: List[State], role: str, rounds: int, norm: bool = True) -> List[float]:
         """simulates the game starting from each State in *states* by choosing random JointActions in each consecutive
         state, until a terminal state is reached. When a terminal state is reached, the goal value for the player with
         role *role* is calculated.
@@ -211,10 +221,27 @@ class SimulatorInterface:
         :return: the sampled effect"""
         pass
 
+    def simulate_sto(self, state: State, role: str, rounds: int, norm: bool=True) -> float:
+        """
+        Simulates the game starting from the given State *state*, selecting a random JointAction at every consecutive
+        state until a terminal state is reached.
+        When a terminal state is reached, the goal value of 'role' is returned.
+        If *rounds* > 1, runs multiple rounds and returns the sums of the goal values in all rounds.
+        If *norm* is True, all goal values are normalized. The sum is **NOT** normalized.
+        The only difference with simulate is that we have to sample the random JointAction for effects.
+        :param state: starting state of the simulation
+        :param role: role to calculate goal values for
+        :param rounds: number rounds of simulation to run
+        :param norm: whether or not to normalize the goal values
+        :return: sum of goal values across all simulation rounds
+        """
+        pass
+
 
 class Simulator(SimulatorInterface):
     def __init__(self, gdl_rules):
         self.engine = PrologEngine(gdl_rules)
+        self.roles = self.get_roles()
         self._goalnorm = self._create_goalnorms()  # dict<Role, NormFunction> used to normalize goal values
 
     def _create_goalnorms(self):
@@ -225,7 +252,7 @@ class Simulator(SimulatorInterface):
             return norm
 
         goalnorms = dict()
-        for role in self.player_roles():
+        for role in self.get_player_roles():
             results = self.engine.query(f"minmax_goals({role}, Min, Max)")
             goalnorms[role] = goalnorm(results[0]['Min'], results[0]['Max'])
         return goalnorms
@@ -243,12 +270,12 @@ class Simulator(SimulatorInterface):
                                                     GDL
     """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
-    def roles(self):
+    def get_roles(self):
         results = self.engine.query(query='roles_pl(R)')
         return PrologEngine.results2string(results[0]['R'])
 
-    def player_roles(self):
-        return list(filter(lambda r: r != 'random', self.roles()))
+    def get_player_roles(self):
+        return list(filter(lambda r: r != 'random', self.roles))
 
     def initial_state(self):
         results = self.engine.query(query='init_pl(State)')
@@ -265,7 +292,7 @@ class Simulator(SimulatorInterface):
     def actionlist2jointaction(self, actions):
         if len(actions) == 0:
             return JointAction([])
-        roles = self.player_roles()
+        roles = self.get_player_roles()
         return JointAction([Action(role, action) for role, action in zip(roles, actions)])
 
     def legal_jointactions(self, state):
@@ -283,6 +310,7 @@ class Simulator(SimulatorInterface):
         return self._goalnorm[role](results[0]['Value']) if norm else results[0]['Value']
 
     def next_state(self, state, jointaction):
+        assert(len(jointaction) == len(self.roles))
         results = self.engine.query(f"next_pl({state.to_term()}, {jointaction.to_term()}, NextState)")
         facts = PrologEngine.results2string(results[0]['NextState'])
         return State(facts)
@@ -298,6 +326,15 @@ class Simulator(SimulatorInterface):
     def get_percepts(self, state, jointaction, role):
         results = self.engine.query(query=f"sees_pl({state.to_term()}, {jointaction.to_term()}, {role}, Percepts)")
         return Percepts([Percept.from_string(string) for string in results[0]['Percepts']])
+
+    def generate_jointaction_from_percepts(self, state, ownaction, percepts):
+        results = self.engine.query(query=f"generate_jointactions("
+                                          f"{state.to_term()},"
+                                          f"{ownaction.to_term()},"
+                                          f"{percepts.to_term()},"
+                                          f"JointActions)")
+        return [JointAction([Action.from_string(action) for action in jointaction])
+                for jointaction in results[0]['JointActions']]
 
     def update_states_ii(self, states, action, percepts, filter_terminal=False):
         results = self.engine.query(query=f"update_valid_states("
@@ -364,3 +401,10 @@ class Simulator(SimulatorInterface):
     def sample_effect(self, state, action):
         results = self.engine.query(query=f"sample_effect({state.to_term()}, {action.role}, {action.action}, Effect)")
         return Action.from_string(results[0]['Effect'])
+
+    def simulate_sto(self, state, role, rounds, norm=True):
+        results = self.engine.query(f"simulate_sto({state.to_term()}, {role}, Value, {rounds})")
+        return self._goalnorm[role](float(results[0]['Value'])) if norm else float(results[0]['Value'])
+
+
+

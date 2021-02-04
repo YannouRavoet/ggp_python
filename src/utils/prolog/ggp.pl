@@ -88,7 +88,7 @@ simulate(State, Role, Value) :-
     	goal_pl(State, Role, Value)
     ;
     	legal_jointaction_random(State, JointAction),
-            next_pl(State, JointAction, NextState),
+        next_pl(State, JointAction, NextState),
         simulate(NextState, Role, Value)
     ),!.
 

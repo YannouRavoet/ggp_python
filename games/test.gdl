@@ -1,4 +1,0 @@
-(<= (effects robot move_up (list (does robot move_up) (does robot move_right) (does robot move_left)) (list 0.8 0.1 0.1))
-    (legal robot move_up)
-    (legal robot move_right)
-    (legal robot move_left))

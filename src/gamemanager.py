@@ -26,7 +26,8 @@ class Player:
 
         self.role = role
         self.action = None
-        self.percepts = list()
+        self.percepts = list()  # Only used with GDL-II
+        self.deterministic_action = None      # Only used with STO-GDL
 
     def set_action(self, action_term):
         self.action = Action(self.role, action_term)
@@ -51,9 +52,9 @@ class Match(object):
 
     def get_jointaction(self):
         actions = list()
-        for player in self.players:
-            if player.action is not None:
-                actions.append(player.action)
+        for pl in self.players:
+            if pl.action is not None:   # empty for first round
+                actions.append(pl.action)
         if self.matchInfo.settings.has_random:
             actions.append(self.random.action)
         return JointAction(actions)
@@ -65,16 +66,25 @@ class Match(object):
                 pl.action = random.choice(legal_actions)
 
     def set_random_action(self):
+        """Sets the action for the random role"""
         self.random.action = random.choice(self.simulator.legal_actions(self.state, self.random.role))
 
     def set_percepts(self):
+        """Sets the percepts for all players"""
         for pl in self.players:
             pl.percepts = self.simulator.get_percepts(self.state, self.get_jointaction(), pl.role)
 
-    def set_deterministic_action(self):
-        """ Turns stochastic player actions choices into a chosen deterministic action."""
+    def set_deterministic_actions(self):
+        """Turns stochastic player actions choices into a deterministic action."""
         for pl in self.players:
-            pl.action = self.simulator.sample_effect(self.state, pl.action)
+            pl.deterministic_action = self.simulator.sample_effect(self.state, pl.action)
+
+    def get_deterministic_jointaction(self):
+        effects = list()
+        for pl in self.players:
+            if pl.deterministic_action is not None:   # empty for first round
+                effects.append(pl.deterministic_action)
+        return JointAction(effects)     # effects are simply deterministic versions of the actions.
 
     def save_results(self):
         for pl in self.players:
@@ -109,6 +119,7 @@ class GameManager(HTTPServer):
         """ Can be used to handle player connections. """
         raise NotImplementedError
 
+    # --- START --- #
     def send_start(self, matchID, player):
         msg = Message(MessageType.START,
                       args=[matchID,
@@ -118,25 +129,45 @@ class GameManager(HTTPServer):
                             self.matches[matchID].matchInfo.playclock])
         self.send_message(player, msg)
 
+    # --- PLAY --- #
     def send_play(self, matchID, player):
         if not (self.matches[matchID].matchInfo.settings.has_imperfect_information
                 or self.matches[matchID].matchInfo.settings.has_stochastic_actions):
-            msg = Message(MessageType.PLAY, args=[matchID, self.matches[matchID].get_jointaction()])
+            msg = Message(MessageType.PLAY,
+                          args=[matchID, self.matches[matchID].get_jointaction()])
+        elif not self.matches[matchID].matchInfo.settings.has_stochastic_actions:
+            msg = Message(MessageType.PLAY_II,
+                          args=[matchID, self.matches[matchID].round, player.action, player.percepts])
+        elif not self.matches[matchID].matchInfo.settings.has_imperfect_information:
+            msg = Message(MessageType.PLAY_STO,
+                          args=[matchID, self.matches[matchID].get_jointaction(), self.matches[matchID].get_deterministic_jointaction()])
         else:
-            msg = Message(MessageType.PLAY_II, args=[matchID, self.matches[matchID].round, player.action, player.percepts])
-
+            msg = Message(MessageType.PLAY_STO_II,
+                          args=[matchID, self.matches[matchID].round, player.action, player.deterministic_action, player.percepts])
         response_msg = self.send_message(player, msg)
-        if response_msg is None:
+
+        if response_msg is None:    # in case of timeouts
             player.set_action("noop")
         else:
             player.set_action(response_msg.args[0])
 
+    # --- STOP --- #
     def send_stop(self, matchID, player):
         if not (self.matches[matchID].matchInfo.settings.has_imperfect_information
                 or self.matches[matchID].matchInfo.settings.has_stochastic_actions):
-            msg = Message(MessageType.STOP, args=[matchID, self.matches[matchID].get_jointaction()])
+            msg = Message(MessageType.STOP,
+                          args=[matchID, self.matches[matchID].get_jointaction()])
+        elif not self.matches[matchID].matchInfo.settings.has_stochastic_actions:
+            msg = Message(MessageType.STOP_II,
+                          args=[matchID, self.matches[matchID].round, player.action, player.percepts])
+        elif not self.matches[matchID].matchInfo.settings.has_imperfect_information:
+            msg = Message(MessageType.STOP_STO,
+                          args=[matchID, self.matches[matchID].get_jointaction(),
+                                self.matches[matchID].get_deterministic_jointaction()])
         else:
-            msg = Message(MessageType.STOP_II, args=[matchID, self.matches[matchID].round, player.action, player.percepts])
+            msg = Message(MessageType.STOP_STO_II,
+                          args=[matchID, self.matches[matchID].round, player.action, player.deterministic_action,
+                                player.percepts])
         self.send_message(player, msg)
 
     """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -156,7 +187,7 @@ class GameManager(HTTPServer):
         state_printer = PrettyPrinterFactory.make_printer(game_file)
         gdl_rules = read_rules(os.path.join('games', game_file))
         simulator = Simulator(gdl_rules)
-        roles = simulator.player_roles()
+        roles = simulator.get_player_roles()
         assert (len(roles) == len(players))
         for i, role in enumerate(roles):
             players[i].role = role
@@ -181,7 +212,7 @@ class GameManager(HTTPServer):
 
             # HANDLE GAME SETTINGS
             if match.matchInfo.settings.has_stochastic_actions:
-                match.set_deterministic_action()
+                match.set_deterministic_actions()
             if match.matchInfo.settings.has_random:
                 match.set_random_action()
             if match.matchInfo.settings.has_imperfect_information:

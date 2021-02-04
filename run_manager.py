@@ -5,22 +5,23 @@ from gamemanager import GameManager, Player
 
 games = {
     # GDL
-    "maze": "maze.gdl",
-    "mazemedium": "mazemedium.gdl",
-    "mazebig": "mazebig.gdl",
-    "tictactoe": "tictactoe.gdl",
-    "connectfour": "connectfour.gdl",
-    "blocks": "blocks.gdl",
-    "blocks2p": "blocks2p.gdl",
-    "bomberman": "bomberman.gdl",
+    "maze": "std_maze.gdl",
+    "mazemedium": "std_maze_medium.gdl",
+    "mazebig": "std_maze_big.gdl",
+    "tictactoe": "std_tictactoe.gdl",
+    "connectfour": "std_connectfour.gdl",
+    "blocks": "std_blocks.gdl",
+    "blocks2p": "std_block_2p.gdl",
+    "bomberman": "std_bomberman.gdl",
     # GDL-II
-    "montyhallproblem": "montyhall.gdl",
-    "kriegtictactoe": "kriegtictactoe.gdl",
-    "meier": "meier.gdl",
-    "transit": "transit.gdl",
-    "stratego": "stratego.gdl",
+    "montyhallproblem": "ii_montyhall.gdl",
+    "kriegtictactoe": "ii_kriegtictactoe.gdl",
+    "meier": "ii_meier.gdl",
+    "transit": "ii_transit.gdl",
+    "stratego": "ii_stratego.gdl",
     # STO GDL
-    "maze_stochastic": "maze_stochastic.gdl"
+    "maze_stochastic": "sto_maze.gdl",
+    "connectfour_stochastic": "sto_connectfour.gdl"
 }
 
 if __name__ == "__main__":

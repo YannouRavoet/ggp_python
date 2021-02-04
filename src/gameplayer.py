@@ -28,38 +28,36 @@ class GamePlayer(HTTPServer, ABC):
     """""""""""
      MESSAGING
     """""""""""
-
     def handle_message(self, msg, rcvtime):
         self.msg_time = rcvtime
         if msg.type == MessageType.START:
-            return self.handle_start(msg.args[0], msg.args[1], msg.args[2], msg.args[3], msg.args[4])
-        elif msg.type == MessageType.PLAY:
-            return self.handle_play(msg.args[0], msg.args[1])
-        elif msg.type == MessageType.STOP:
-            return self.handle_stop(msg.args[0], msg.args[1])
-        elif msg.type == MessageType.PLAY_II:
-            return self.handle_play(msg.args[0], msg.args[2], msg.args[3])  # ignores the round argument
-        elif msg.type == MessageType.STOP_II:
-            return self.handle_stop(msg.args[0], msg.args[2], msg.args[3])  # ignores the round argument
+            return self.handle_message_start(msg.args)
+        elif msg.type in [MessageType.PLAY, MessageType.PLAY_II, MessageType.PLAY_STO, MessageType.PLAY_STO_II]:
+            return self.handle_message_play(msg.args)
+        elif msg.type in [MessageType.STOP, MessageType.STOP_II, MessageType.STOP_STO, MessageType.STOP_STO_II]:
+            return self.handle_message_stop(msg.args)
         else:
             raise NotImplementedError
 
-    def handle_start(self, matchID, role, gdl_rules, startclock, playclock):
+    def handle_message_start(self, msg_args):
+        matchid, role, gdl_rules, startclock, playclock = msg_args
         self.set_reply_deadline(startclock)
         self.simulator = Simulator(gdl_rules)
-        self.matchInfo = MatchInfo(matchID, gdl_rules, startclock, playclock, self.simulator.get_gamesettings())
+        self.matchInfo = MatchInfo(matchid, gdl_rules, startclock, playclock, self.simulator.get_gamesettings())
         self.role = role
 
         self.player_start(timeout=self.clock_left())
         return Message(MessageType.READY)
 
-    def handle_play(self, matchID, actions, *args, **kwargs):
+    def handle_message_play(self, msg_args):
+        matchid, actions = msg_args
         self.set_reply_deadline(self.matchInfo.playclock)
         jointaction = self.simulator.actionlist2jointaction(actions)
         action = self.player_play(len(jointaction) == 0, jointaction, timeout=self.clock_left())
         return Message(MessageType.ACTION, [action])
 
-    def handle_stop(self, matchID, actions, *args, **kwargs):
+    def handle_message_stop(self, msg_args):
+        matchid, actions = msg_args
         self.set_reply_deadline(self.matchInfo.playclock)
         jointaction = self.simulator.actionlist2jointaction(actions)
         goal_value = self.player_stop(jointaction, timeout=self.clock_left())
@@ -69,12 +67,12 @@ class GamePlayer(HTTPServer, ABC):
 
     @staticmethod
     def clear_screen():
+        """A helper method to clear the screen of any prints. For example, can be called when a round is over."""
         os.system('clear')
 
     """""""""
       TIMERS
     """""""""
-
     def set_reply_deadline(self, clock_time):
         self.reply_deadline = self.msg_time + clock_time - self.reply_buffer
 
@@ -84,7 +82,6 @@ class GamePlayer(HTTPServer, ABC):
     """""""""""""""""""""""
     PLAYER IMPLEMENTATIONS
     """""""""""""""""""""""
-
     @abstractmethod
     @stopit.threading_timeoutable()
     def player_start(self):
@@ -102,14 +99,16 @@ class GamePlayer(HTTPServer, ABC):
 
 
 class GamePlayerII(GamePlayer, ABC):
-    def handle_play(self, matchID, action, percepts=None, *args, **kwargs):
+    def handle_message_play(self, msg_args):
+        matchid, round, action, percepts = msg_args
         self.set_reply_deadline(self.matchInfo.playclock)
         action = Action(self.role, action) if action != "None" else None
         percepts = Percepts([Percept(self.role, percept) for percept in percepts])
         next_action = self.player_play(action is None, action, percepts, timeout=self.clock_left())
         return Message(MessageType.ACTION, [next_action])
 
-    def handle_stop(self, matchID, action, percepts=None, *args, **kwargs):
+    def handle_message_stop(self, msg_args):
+        matchid, round, action, percepts = msg_args
         self.set_reply_deadline(self.matchInfo.playclock)
         action = Action(self.role, action)
         percepts = Percepts([Percept(self.role, percept) for percept in percepts])
@@ -117,3 +116,24 @@ class GamePlayerII(GamePlayer, ABC):
         self.matchInfo.add_result(self.role, goal_value)
         self.__init__(self.server_port)
         return Message(MessageType.DONE)
+
+
+class GamePlayerSTO(GamePlayer, ABC):
+    def handle_message_play(self, msg_args):
+        matchid, actions, deterministic_actions = msg_args
+        self.set_reply_deadline(self.matchInfo.playclock)
+        jointaction = self.simulator.actionlist2jointaction(actions)
+        joint_deterministic_action = self.simulator.actionlist2jointaction(deterministic_actions)
+        action = self.player_play(len(jointaction) == 0, jointaction, joint_deterministic_action, timeout=self.clock_left())
+        return Message(MessageType.ACTION, [action])
+
+    def handle_message_stop(self, msg_args):
+        matchid, actions, deterministic_actions = msg_args
+        self.set_reply_deadline(self.matchInfo.playclock)
+        jointaction = self.simulator.actionlist2jointaction(actions)
+        joint_deterministic_action = self.simulator.actionlist2jointaction(deterministic_actions)
+        goal_value = self.player_stop(jointaction, joint_deterministic_action, timeout=self.clock_left())
+        self.matchInfo.add_result(self.role, goal_value)
+        self.__init__(self.server_port)
+        return Message(MessageType.DONE)
+

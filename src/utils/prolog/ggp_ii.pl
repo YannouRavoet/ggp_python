@@ -37,7 +37,7 @@ update_valid_states([], _, _, TempStates, StatesOut, Terminal):-
         filter_nonterminals(StatesOutUnfiltered, StatesOut)
      ),!.
 update_valid_states([StatesInH|StatesInT], Action, Percepts, Temp, StatesOut, Terminal):-
-    generate_jointactions_ii(StatesInH, Action, Percepts, JointActions),
+    generate_jointactions(StatesInH, Action, Percepts, JointActions),
     length(JointActions, Length),
     (Length > 0 -> % If no jointactions were found that result in the same Percepts, the state was not true.
         build_states(StatesInH, JointActions, Temp, NewTemp),
@@ -46,8 +46,8 @@ update_valid_states([StatesInH|StatesInT], Action, Percepts, Temp, StatesOut, Te
         update_valid_states(StatesInT, Action, Percepts, Temp, StatesOut, Terminal)
     ).
 
-% generate_jointactions_ii/4 generates all jointactions that complete the role's Action and result in the given Percepts.
-generate_jointactions_ii(State, does(Role,Action), Percepts, JointActions):-
+% generate_jointactions/4 generates all jointactions that complete the role's Action and result in the given Percepts.
+generate_jointactions(State, does(Role,Action), Percepts, JointActions):-
     setof(JA, legal_jointaction_complete(State, does(Role,Action), JA), LegalJointActions),
     filter_jointactions_ii(State, Percepts, Role, LegalJointActions, [], JointActions).
 

@@ -16,9 +16,9 @@ class Message:
     def __str__(self):
         if self.type == MessageType.START:
             return f"start({', '.join([str(arg) for arg in self.args])})"
-        elif self.type == MessageType.PLAY or self.type == MessageType.PLAY_II:
+        elif self.type in [MessageType.PLAY, MessageType.PLAY_II, MessageType.PLAY_STO, MessageType.PLAY_STO_II]:
             return f"play({', '.join([str(arg) for arg in self.args])})"
-        elif self.type == MessageType.STOP or self.type == MessageType.STOP_II:
+        elif self.type in [MessageType.STOP, MessageType.STOP_II, MessageType.STOP_STO, MessageType.STOP_STO_II]:
             return f"stop({', '.join([str(arg) for arg in self.args])})"
         elif self.type == MessageType.READY:
             return "ready"
@@ -30,7 +30,9 @@ class Message:
     @staticmethod
     def parse(message):
         """
-        Converts a string message into a python Message object
+        Converts a string message into a python Message object.
+        Checks for the most complex match first to prevent overlapping matches:
+        e.g., 'play(6zq56, [], [])' matches r"play\((\w*), (\[.*])\)".
         :param message: string of the message to parse
         :return: Message object. Content is found in the 'args' variable in the same ordered as received in the message
         """
@@ -47,30 +49,48 @@ class Message:
             playclock = int(m.group(5))
             return Message(MessageType.START, args=[matchID, role, rules, startclock, playclock])
         elif message.startswith("play"):
-            m = re.match(r"play\((\w*), (\[.*])\)", message)
+            # --- PLAY_STO --- #
+            m = re.match(r"play\((\w*), (\[.*]), (\[.*])\)", message)
             if m is not None:
                 matchID = m.group(1)
                 actions = PrologEngine.string2list(m.group(2))
-                return Message(MessageType.PLAY, args=[matchID, actions])
-            else:
-                m = re.match(r"play\((\w*), ([0-9]*), (.*), (\[.*])\)", message)
+                effects = PrologEngine.string2list(m.group(2))
+                return Message(MessageType.PLAY_STO, args=[matchID, actions, effects])
+            # --- PLAY_II --- #
+            m = re.match(r"play\((\w*), ([0-9]*), (.*), (\[.*])\)", message)
+            if m is not None:
                 matchID = m.group(1)
                 round = m.group(2)
                 action = m.group(3)
                 percepts = PrologEngine.string2list(m.group(4))
                 return Message(MessageType.PLAY_II, args=[matchID, round, action, percepts])
-        elif message.startswith("stop"):
-            m = re.match(r"stop\((\w*), (\[.*])\)", message)
+            # --- PLAY --- #
+            m = re.match(r"play\((\w*), (\[.*])\)", message)
             if m is not None:
                 matchID = m.group(1)
                 actions = PrologEngine.string2list(m.group(2))
-                return Message(MessageType.STOP, args=[matchID, actions])
-            else:
-                m = re.match(r"stop\((\w*), ([0-9]*), (.*), (\[.*])\)", message)
+                return Message(MessageType.PLAY, args=[matchID, actions])
+        elif message.startswith("stop"):
+            # --- STOP_STO --- #
+            m = re.match(r"stop\((\w*), (\[.*]), (\[.*])\)", message)
+            if m is not None:
+                matchID = m.group(1)
+                actions = PrologEngine.string2list(m.group(2))
+                effects = PrologEngine.string2list(m.group(2))
+                return Message(MessageType.STOP_STO, args=[matchID, actions, effects])
+            # --- STOP_II --- #
+            m = re.match(r"stop\((\w*), ([0-9]*), (.*), (\[.*])\)", message)
+            if m is not None:
                 matchID = m.group(1)
                 round = m.group(2)
                 action = m.group(3)
                 percepts = PrologEngine.string2list(m.group(4))
                 return Message(MessageType.STOP_II, args=[matchID, round, action, percepts])
+            # --- STOP --- #
+            m = re.match(r"stop\((\w*), (\[.*])\)", message)
+            if m is not None:
+                matchID = m.group(1)
+                actions = PrologEngine.string2list(m.group(2))
+                return Message(MessageType.STOP, args=[matchID, actions])
         else:
             return Message(MessageType.ACTION, args=[message])

@@ -1,0 +1,207 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Connect Four
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; ROLE
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(role red)
+(role black)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Base
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(base (cell ?x ?y ?v))
+(base (control ?p))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; INIT Relations
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(init (control red))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; LEGAL Relations
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(<= (legal red noop)
+    (true (control black)))
+(<= (legal red (drop ?x))
+    (true (control red))
+    (columnOpen ?x))
+
+(<= (legal black noop)
+    (true (control red)))
+(<= (legal black (drop ?x))
+    (true (control black))
+    (columnOpen ?x))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; EFFECTS
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(effect ?p noop (list (does ?p noop)) (list 1))
+
+(<= (effect ?p (drop ?col) (list (does ?p (drop ?col)) (does ?p (drop ?prev_col)) (does ?p (drop ?next_col))) (list 0.8 0.1 0.1))
+    (legal ?p (drop ?col))
+    ( > ?col 0)
+    (succ ?prev_col ?col)
+    (succ ?col ?next_col)
+    (legal ?p (drop ?prev_col))
+    (legal ?p (drop ?next_col)))
+
+(<= (effect ?p (drop ?col) (list (does ?p (drop ?col)) (does ?p (drop ?prev_col))) (list 0.85 0.15))
+    (legal ?p (drop ?col))
+    ( > ?col 0)
+    (succ ?prev_col ?col)
+    (succ ?col ?next_col)
+    (legal ?p (drop ?prev_col))
+    (not (legal ?p (drop ?next_col))))
+
+(<= (effect ?p (drop ?col) (list (does ?p (drop ?col)) (does ?p (drop ?next_col))) (list 0.85 0.15))
+    (legal ?p (drop ?col))
+    ( > ?col 0)
+    (succ ?prev_col ?col)
+    (succ ?col ?next_col)
+    (legal ?p (drop ?next_col))
+    (not (legal ?p (drop ?prev_col))))
+
+(<= (effect ?p (drop ?col) (list (does ?p (drop ?col))) (list 1))
+    (legal ?p (drop ?col))
+    ( > ?col 0)
+    (succ ?prev_col ?col)
+    (succ ?col ?next_col)
+    (not (legal ?p (drop ?prev_col)))
+    (not (legal ?p (drop ?next_col))))
+
+;;; special case for col 0, since we use Prolog built-in succ/2
+(<= (effect ?p (drop 0) (list (does ?p (drop 0)) (does ?p (drop 1))) (list 0.85 0.15))
+    (legal ?p (drop 0))
+    (legal ?p (drop 1)))
+
+(<= (effect ?p (drop 0) (list (does ?p (drop 0))) (list 1))
+    (legal ?p (drop 0))
+    (not (legal ?p (drop 1))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; NEXT Relations
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(<= (next (cell ?x 5 ?player))
+    (does ?player (drop ?x))
+	  (columnEmpty ?x))
+(<= (next (cell ?x ?y2 ?player))
+    (does ?player (drop ?x))
+    (cellOpen ?x ?y2)
+    (succ ?y2 ?y1)
+    (not (cellOpen ?x ?y1)))
+(<= (next (cell ?x ?y ?player))
+    (true (cell ?x ?y ?player)))
+
+(<= (next (control red))
+    (true (control black)))
+(<= (next (control black))
+    (true (control red)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; TERMINAL Relations
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(<= terminal
+    (line red))
+(<= terminal
+    (line black))
+(<= terminal
+    (not boardOpen))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; GOAL Relations
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(<= (goal red 100)
+    (line red))
+(<= (goal red 50)
+    (not (line red))
+    (not (line black))
+    (not boardOpen))
+(<= (goal red 0)
+    (line black))
+(<= (goal red 0)
+    (not (line red))
+    (not (line black))
+    boardOpen)
+
+(<= (goal black 100)
+    (line black))
+(<= (goal black 50)
+    (not (line red))
+    (not (line black))
+    (not boardOpen))
+(<= (goal black 0)
+    (line red))
+(<= (goal black 0)
+    (not (line red))
+    (not (line black))
+    boardOpen)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; View Definitions
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(<= (cellOpen ?x ?y)
+    (x ?x)
+    (y ?y)
+    (not (true (cell ?x ?y red)))
+    (not (true (cell ?x ?y black))))
+(<= (columnOpen ?x)
+    (cellOpen ?x 0))
+(<= (columnEmpty ?x)
+    (cellOpen ?x 5))
+(<= boardOpen
+    (x ?x)
+    (columnOpen ?x))
+
+(<= (line ?player)
+    (true (cell ?x1 ?y ?player))
+    (succ ?x1 ?x2)
+    (succ ?x2 ?x3)
+    (succ ?x3 ?x4)
+    (true (cell ?x2 ?y ?player))
+    (true (cell ?x3 ?y ?player))
+    (true (cell ?x4 ?y ?player)))
+(<= (line ?player)
+    (true (cell ?x ?y1 ?player))
+    (succ ?y1 ?y2)
+    (succ ?y2 ?y3)
+    (succ ?y3 ?y4)
+    (true (cell ?x ?y2 ?player))
+    (true (cell ?x ?y3 ?player))
+    (true (cell ?x ?y4 ?player)))
+(<= (line ?player)
+    (true (cell ?x1 ?y1 ?player))
+    (succ ?x1 ?x2)
+    (succ ?x2 ?x3)
+    (succ ?x3 ?x4)
+    (succ ?y1 ?y2)
+    (succ ?y2 ?y3)
+    (succ ?y3 ?y4)
+    (true (cell ?x2 ?y2 ?player))
+    (true (cell ?x3 ?y3 ?player))
+    (true (cell ?x4 ?y4 ?player)))
+(<= (line ?player)
+    (true (cell ?x1 ?y4 ?player))
+    (succ ?x1 ?x2)
+    (succ ?x2 ?x3)
+    (succ ?x3 ?x4)
+    (succ ?y3 ?y4)
+    (succ ?y2 ?y3)
+    (succ ?y1 ?y2)
+    (true (cell ?x2 ?y3 ?player))
+    (true (cell ?x3 ?y2 ?player))
+    (true (cell ?x4 ?y1 ?player)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Static Relations
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(x 0) (x 1) (x 2) (x 3) (x 4) (x 5) (x 6) (x 7)
+(y 0) (y 1) (y 2) (y 3) (y 4) (y 5)

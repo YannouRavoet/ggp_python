@@ -1,12 +1,11 @@
 from abc import ABC
-
 import stopit
-
 from gameplayer import GamePlayer
 from utils.ggp.state import State
 from utils.pretty_print import PrettyPrinterFactory, PrettyPrinter
 
-GAME_FILE = 'maze.gdl'
+# quick fix to pretty print correct game
+GAME_FILE = 'std_maze.gdl'
 
 class HumanPlayer(GamePlayer, ABC):
     def __init__(self, port):

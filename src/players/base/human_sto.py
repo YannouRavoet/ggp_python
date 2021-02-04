@@ -1,14 +1,14 @@
 from abc import ABC
 import stopit
-from gameplayer import GamePlayerII
-from utils.ggp.jointaction import JointAction
+from gameplayer import GamePlayerSTO
 from utils.ggp.state import State
 from utils.pretty_print import PrettyPrinter, PrettyPrinterFactory
 
-GAME_FILE = 'maze_stochastic.gdl'
+# quick fix to pretty print correct game
+GAME_FILE = 'sto_connectfour.gdl'
 
 
-class HumanSTO(GamePlayerII, ABC):
+class HumanSTO(GamePlayerSTO, ABC):
     def __init__(self, port):
         super().__init__(port)
         self.state: State = None
@@ -21,9 +21,9 @@ class HumanSTO(GamePlayerII, ABC):
     @stopit.threading_timeoutable()
     def player_play(self, first_round, *args, **kwargs):
         if not first_round:
-            action = args[0]
-            percepts = args[1]  # this class is only used for perfect information stochastic games
-            self.state = self.simulator.next_state(self.state, JointAction([action]))
+            jointaction = args[0]
+            jointdeterministic_action = args[1]
+            self.state = self.simulator.next_state(self.state, jointdeterministic_action)
         if self.pretty_printer is not None:
             self.pretty_printer.print_state(self.state)
         legal_actions = self.simulator.legal_actions(self.state, self.role)
@@ -37,6 +37,7 @@ class HumanSTO(GamePlayerII, ABC):
 
     @stopit.threading_timeoutable()
     def player_stop(self, *args, **kwargs):
-        action = args[0]
-        self.state = self.simulator.next_state(self.state, JointAction([action]))
+        jointaction = args[0]
+        jointdeterministic_action = args[1]
+        self.state = self.simulator.next_state(self.state, jointdeterministic_action)
         return self.simulator.goal(self.state, self.role)

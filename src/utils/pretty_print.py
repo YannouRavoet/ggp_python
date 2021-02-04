@@ -116,14 +116,14 @@ class Board2DPrinter(PrettyPrinter):
 class PrettyPrinterFactory:
     @staticmethod
     def make_printer(gamefile) -> PrettyPrinter:
-        if gamefile in ['maze.gdl', 'maze_stochastic.gdl']:
+        if gamefile in ['std_maze.gdl', 'sto_maze.gdl']:
             return Board2DPrinter(range_x=5, range_y=5, empty_val=None)
-        if gamefile == 'mazemedium.gdl':
+        if gamefile == 'std_maze_medium.gdl':
             return Board2DPrinter(range_x=9, range_y=7, empty_val=None)
-        if gamefile == 'mazebig.gdl':
+        if gamefile == 'std_maze_big.gdl':
             return Board2DPrinter(range_x=15, range_y=10, empty_val=None)
-        if gamefile in ['tictactoe.gdl', 'kriegtictactoe.gdl']:
+        if gamefile in ['std_tictactoe.gdl', 'ii_kriegtictactoe.gdl']:
             return Board2DPrinter(range_x=3, range_y=3, empty_val='b')
-        if gamefile == 'connectfour.gdl':
+        if gamefile in ['std_connectfour.gdl', 'sto_connectfour.gdl']:
             return Board2DPrinter(range_x=8, range_y=6, empty_val=None)
         return PrettyPrinter()

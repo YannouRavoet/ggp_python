@@ -1,7 +1,8 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="GDL" type="Multirun" factoryName="Multirun" separateTabs="false" reuseTabsWithFailures="true" startOneByOne="true" markFailedProcess="true" hideSuccessProcess="false" delayTime="1.0">
     <runConfiguration name="mcts@5601" type="Python" />
-    <runConfiguration name="maze" type="Python" />
+    <runConfiguration name="mcts@5602" type="Python" />
+    <runConfiguration name="tictactoe" type="Python" />
     <method v="2" />
   </configuration>
 </component>

@@ -129,91 +129,42 @@
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; ACTION EFFECTS
+;;; EFFECTS
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; MOVE UP
-(<= (effect robot move_up (list (does robot move_up) (does robot move_right) (does robot move_left)) (list 0.8 0.1 0.1))
-    (legal robot move_up)
-    (legal robot move_right)
-    (legal robot move_left))
+(<= (effect robot ?move (list (does robot ?move) (does robot ?prev_move) (does robot ?next_move)) (list 0.8 0.1 0.1))
+    (prev_move ?move ?prev_move)
+    (next_move ?move ?next_move)
+    (legal robot ?move)
+    (legal robot ?prev_move)
+    (legal robot ?next_move))
 
-(<= (effect robot move_up (list (does robot move_up) (does robot move_right)) (list 0.85 0.15))
-    (legal robot move_up)
-    (legal robot move_right)
-    (not (legal robot move_left)))
+(<= (effect robot ?move (list (does robot ?move) (does robot ?prev_move)) (list 0.85 0.15))
+    (prev_move ?move ?prev_move)
+    (next_move ?move ?next_move)
+    (legal robot ?move)
+    (legal robot ?prev_move)
+    (not (legal robot ?next_move)))
 
-(<= (effect robot move_up (list (does robot move_up) (does robot move_left)) (list 0.85 0.15))
-    (legal robot move_up)
-    (legal robot move_left)
-    (not (legal robot move_right)))
+(<= (effect robot ?move (list (does robot ?move) (does robot ?next_move)) (list 0.85 0.15))
+    (prev_move ?move ?prev_move)
+    (next_move ?move ?next_move)
+    (legal robot ?move)
+    (legal robot ?next_move)
+    (not (legal robot ?prev_move)))
 
-(<= (effect robot move_up (list (does robot move_up)) (list 1))
-    (legal robot move_up)
-    (not (legal robot move_right))
-    (not (legal robot move_left)))
+(<= (effect robot ?move (list (does robot ?move)) (list 1))
+    (prev_move ?move ?prev_move)
+    (next_move ?move ?next_move)
+    (legal robot ?move)
+    (not (legal robot ?prev_move))
+    (not (legal robot ?next_move)))
 
-;;; MOVE RIGHT
-(<= (effect robot move_right (list (does robot move_right) (does robot move_down) (does robot move_up)) (list 0.8 0.1 0.1))
-    (legal robot move_right)
-    (legal robot move_down)
-    (legal robot move_up))
-
-(<= (effect robot move_right (list (does robot move_right) (does robot move_down)) (list 0.85 0.15))
-    (legal robot move_right)
-    (legal robot move_down)
-    (not (legal robot move_up)))
-
-(<= (effect robot move_right (list (does robot move_right) (does robot move_up)) (list 0.85 0.15))
-    (legal robot move_right)
-    (legal robot move_up)
-    (not (legal robot move_down)))
-
-(<= (effect robot move_right (list (does robot move_right)) (list 1))
-    (legal robot move_right)
-    (not (legal robot move_down))
-    (not (legal robot move_up)))
-
-;;; MOVE DOWN
-(<= (effect robot move_down (list (does robot move_down) (does robot move_left) (does robot move_right)) (list 0.8 0.1 0.1))
-    (legal robot move_down)
-    (legal robot move_left)
-    (legal robot move_right))
-
-(<= (effect robot move_down (list (does robot move_down) (does robot move_left)) (list 0.85 0.15))
-    (legal robot move_down)
-    (legal robot move_left)
-    (not (legal robot move_right)))
-
-(<= (effect robot move_down (list (does robot move_down) (does robot move_right)) (list 0.85 0.15))
-    (legal robot move_down)
-    (legal robot move_right)
-    (not (legal robot move_left)))
-
-(<= (effect robot move_down (list (does robot move_down)) (list 1))
-    (legal robot move_down)
-    (not (legal robot move_left))
-    (not (legal robot move_right)))
-
-;;; MOVE LEFT
-(<= (effect robot move_left (list (does robot move_left) (does robot move_up) (does robot move_down)) (list 0.8 0.1 0.1))
-    (legal robot move_left)
-    (legal robot move_up)
-    (legal robot move_down))
-
-(<= (effect robot move_left (list (does robot move_left) (does robot move_up)) (list 0.85 0.15))
-    (legal robot move_left)
-    (legal robot move_up)
-    (not (legal robot move_down)))
-
-(<= (effect robot move_left (list (does robot move_left) (does robot move_down)) (list 0.85 0.15))
-    (legal robot move_left)
-    (legal robot move_down)
-    (not (legal robot move_up)))
-
-(<= (effect robot move_left (list (does robot move_left)) (list 1))
-    (legal robot move_left)
-    (not (legal robot move_up))
-    (not (legal robot move_down)))
+(prev_move move_up move_left)
+(prev_move move_right move_up)
+(prev_move move_down move_right)
+(prev_move move_left move_down)
+(<= (next_move ?move ?next_move)
+    (prev_move ?next_move ?move))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; GOAL
@@ -238,7 +189,6 @@
 (<= terminal
     (location robot ?x ?y)
     (location gold ?x ?y))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

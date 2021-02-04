@@ -84,7 +84,7 @@ class MCTSNode:
         return str(f"AVG:{self.AVG():.2f} - STATE:{str(self.state)}")
 
 
-class MCTSPlayer(GamePlayer):
+class MCTSPlayer_STO(GamePlayer):
     """MCTSPlayer builds a game tree using Monte-Carlo Tree Search with Upper Confidence Bound 1 (UCB1)."""
 
     def __init__(self, port, expl_bias=math.sqrt(2)):
