@@ -13,6 +13,7 @@ games = {
     "blocks": "std_blocks.gdl",
     "blocks2p": "std_block_2p.gdl",
     "bomberman": "std_bomberman.gdl",
+    "amazons": "std_amazons.gdl",
     # GDL-II
     "montyhallproblem": "ii_montyhall.gdl",
     "kriegtictactoe": "ii_kriegtictactoe.gdl",
@@ -21,7 +22,13 @@ games = {
     "stratego": "ii_stratego.gdl",
     # STO GDL
     "maze_stochastic": "sto_maze.gdl",
-    "connectfour_stochastic": "sto_connectfour.gdl"
+    "connectfour_stochastic": "sto_connectfour.gdl",
+    "dicegame": "sto_dicegame.gdl",
+    "amazons_stochastic": "sto_amazons.gdl",
+    "maze_stochastic_guarded": "sto_maze_medium_guarded.gdl",
+    # STO DETERMINISTIC GAMES (FOR TESTING)
+    "std_maze_sto": "std_maze_sto.gdl",
+    "std_mazemedium_sto": "std_maze_medium_sto.gdl",
 }
 
 if __name__ == "__main__":
@@ -31,6 +38,7 @@ if __name__ == "__main__":
     DEFAULT_PORT = 5600
     DEFAULT_STARTCLOCK = 30
     DEFAULT_PLAYCLOCK = 10
+    DEFAULT_ITERATIONS = 1  #number of matches to play
 
 
     def player(s):

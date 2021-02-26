@@ -1,3 +1,4 @@
+:- style_check(-singleton), style_check(-discontiguous).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                                             Util Methods                                                             %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -8,9 +9,6 @@ clear_engine :-
 
 distinct(X,Y) :-
     X \= Y.
-
-or(X,_):-X.
-or(_,Y):-Y.
 
 gteq(X,Y):- X >= Y.
 
@@ -78,11 +76,12 @@ legal_jointaction_random_iter(_, [], JointAction, JointAction).
 legal_jointaction_random_iter(State, [RoleH|RoleT], Temp, JointAction) :-
     legals_pl(State, RoleH, Actions),
     random_member(Action, Actions),
-    legal_jointaction_iter(State, RoleT, [Action|Temp], JointAction).
+    legal_jointaction_random_iter(State, RoleT, [Action|Temp], JointAction).
 
 
-% simulate/3 simulates a random playthrough from the current state until a terminal state is reached.
-% It then finds the goal value for the given role in that terminal state.
+% simulate/3 simulates a random playthrough from the current state
+% until a terminal state is reached. It then finds the goal value
+% for the given role in that terminal state.
 simulate(State, Role, Value) :-
     (terminal_pl(State) ->
     	goal_pl(State, Role, Value)
@@ -92,7 +91,8 @@ simulate(State, Role, Value) :-
         simulate(NextState, Role, Value)
     ),!.
 
-% simulate/4 simulates multiple random playthroughs from a given state and sums up the total score for the given role.
+% simulate/4 simulates multiple playthroughs from a given state
+% and sums up the total score for the given role.
 simulate(State, Role, Total, Rounds) :-
     simulate_iter(State, Role, 0, Total, Rounds).
 

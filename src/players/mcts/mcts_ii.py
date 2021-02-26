@@ -1,12 +1,12 @@
 import random
-
+import math
 import stopit
 from gameplayer import GamePlayerII
 from players.mcts.mcts import MCTSNode
 
 
 class MCTSPlayerII(GamePlayerII):
-    def __init__(self, port, expl_bias=2):
+    def __init__(self, port, expl_bias=math.sqrt(2)):
         super().__init__(port)
         self.root_nodes = None
         self.max_root_nodes = 100000  # max number of root_nodes to keep track of (chosen randomly)

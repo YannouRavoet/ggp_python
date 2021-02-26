@@ -24,8 +24,6 @@ class MCTSNode:
             self.children[joint_action] = None
 
     def get_child(self, jointaction):
-        if isinstance(jointaction, list):
-            return None
         return self.children[jointaction]
 
     def explored_children(self):
@@ -91,7 +89,10 @@ class MCTSPlayer(GamePlayer):
         super().__init__(port)
         self.root_node: MCTSNode = None  # root node of the game tree
         self.expl_bias: float = expl_bias  # exploration bias to use with UCB1
-        self.rounds_per_loop: int = 100  # simulation rounds per expansion
+        self.rounds_per_loop: int = 10  # simulation rounds per expansion
+
+        self.round = 1
+        self.loops_in_round: Dict[int, int] = dict()
 
     def make_node(self, parent, jointaction, state=None):
         if state is None:
@@ -101,7 +102,7 @@ class MCTSPlayer(GamePlayer):
 
     @stopit.threading_timeoutable()
     def player_start(self):
-        self.root_node = self.make_node(None, None, state=self.simulator.initial_state())
+        self.root_node = self.make_node(parent=None, jointaction=None, state=self.simulator.initial_state())
 
     @stopit.threading_timeoutable()
     def player_play(self, first_round: bool, *args, **kwargs):
@@ -118,15 +119,15 @@ class MCTSPlayer(GamePlayer):
                 self.backprop(node, goal_value, visits=self.rounds_per_loop)
                 loops += self.rounds_per_loop
             except stopit.TimeoutException:
-                self.clear_screen()
-                print(f"Ran {loops} loops of MCTS")
-                self.root_node.print(self.expl_bias)
+                self.loops_in_round[self.round] = loops
+                self.round += 1
                 return self.action_choice()
 
     @stopit.threading_timeoutable()
     def player_stop(self, *args, **kwargs):
         jointaction: JointAction = args[0]
         self.update_root_node(jointaction)
+        print(f"Loops per round: {self.loops_in_round}")
         return self.simulator.goal(self.root_node.state, self.role)
 
     def update_root_node(self, jointaction):

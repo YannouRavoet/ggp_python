@@ -15,7 +15,7 @@
 ;;; BASE
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(base (cell ?x ?y ?v))
+(base (location ?v ?x ?y))
 (base (tried ?r ?x ?y))
 (base (step ?s))
 
@@ -23,15 +23,15 @@
 ;;; INIT Relations
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(init (cell 0 0 b))
-(init (cell 0 1 b))
-(init (cell 0 2 b))
-(init (cell 1 0 b))
-(init (cell 1 1 b))
-(init (cell 1 2 b))
-(init (cell 2 0 b))
-(init (cell 2 1 b))
-(init (cell 2 2 b))
+(init (location b 0 0))
+(init (location b 0 1))
+(init (location b 0 2))
+(init (location b 1 0))
+(init (location b 1 1))
+(init (location b 1 2))
+(init (location b 2 0))
+(init (location b 2 1))
+(init (location b 2 2))
 (init (step 1))
 
 
@@ -41,7 +41,7 @@
 
 (<= (legal ?p (mark ?m ?n))
    (role ?p)
-   (true (cell ?m ?n ?c))
+   (true (location ?c ?m ?n))
    (distinct ?c ?p)
    (not (true (tried ?p ?m ?n))))
 
@@ -51,7 +51,7 @@
 
 (<= (validmove ?p ?m ?n)
    (does ?p (mark ?m ?n))
-   (true (cell ?m ?n b))
+   (true (location b ?m ?n))
    (not doublehit))
 
 (<= (marked ?m ?n)
@@ -62,15 +62,15 @@
 ;;; NEXT Relations
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(<= (next (cell ?m ?n ?p))
+(<= (next (location ?p ?m ?n))
    (validmove ?p ?m ?n))
 
-(<= (next (cell ?m ?n ?c))
-   (true (cell ?m ?n ?c))
+(<= (next (location ?c ?m ?n))
+   (true (location ?c ?m ?n))
    (distinct ?c b))
 
-(<= (next (cell ?m ?n b))
-   (true (cell ?m ?n b))
+(<= (next (location b ?m ?n))
+   (true (location b ?m ?n))
    (not (marked ?m ?n)))
 
 (<= (next (tried ?p ?m ?n))
@@ -113,29 +113,29 @@
    (true (step 30)))
 
 (<= (line ?c)
-   (true (cell ?m 0 ?c))
-   (true (cell ?m 1 ?c))
-   (true (cell ?m 2 ?c)))
+   (true (location ?c ?m 0))
+   (true (location ?c ?m 1))
+   (true (location ?c ?m 2)))
 
 (<= (line ?c)
-   (true (cell 0 ?n ?c))
-   (true (cell 1 ?n ?c))
-   (true (cell 2 ?n ?c)))
+   (true (location ?c 0 ?n))
+   (true (location ?c 1 ?n))
+   (true (location ?c 2 ?n)))
 
 (<= (line ?c)
-   (true (cell 0 0 ?c))
-   (true (cell 1 1 ?c))
-   (true (cell 2 2 ?c)))
+   (true (location ?c 0 0))
+   (true (location ?c 1 1))
+   (true (location ?c 2 2)))
 
 (<= (line ?c)
-   (true (cell 0 2 ?c))
-   (true (cell 1 1 ?c))
-   (true (cell 2 0 ?c)))
+   (true (location ?c 0 2))
+   (true (location ?c 1 1))
+   (true (location ?c 2 0)))
 
 (<= open
-   (true (cell ?m1 ?n1 b))
+   (true (location b ?m1 ?n1))
    (not (true (tried white ?m1 ?n1)))
-   (true (cell ?m2 ?n2 b))
+   (true (location b ?m2 ?n2))
    (not (true (tried black ?m2 ?n2))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

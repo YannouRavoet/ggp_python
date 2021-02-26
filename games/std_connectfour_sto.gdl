@@ -36,6 +36,11 @@
     (true (control black))
     (columnOpen ?x))
 
+
+
+(outcome ?p (drop ?x) (listof (does ?p (drop ?x))) (listof 1))
+(outcome ?p noop (listof (does ?p noop)) (listof 1))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; NEXT Relations
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

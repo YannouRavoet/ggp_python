@@ -15,13 +15,29 @@ values(effect(Role, Action), Effects):-
     effect(Role, Action, Effects, _).
 
 
+% samples and returns the effect of a stochastic action assuming the state is asserted.
+sample(Role, Action, Effect):-
+    effect(Role, Action, _, Probs), %get the probs
+    set_sw(effect(Role, Action), Probs), %update the probs (since this is not supported directly for non-ground switches.
+    msw(effect(Role, Action), Effect).  %sample the effect
+
 % samples the effect of a stochastic action in a given state and returns the effect.
 sample_effect(State, Role, Action, Effect):-
     maplist(assertz, State),
-    effect(Role, Action, _, Probs), %get the probs
-    set_sw(effect(Role, Action), Probs), %update the probs (since this is not supported directly for non-ground switches.
-    msw(effect(Role, Action), Effect),  %sample the effect
+    sample(Role, Action, Effect),
     maplist(retract, State), !.
+
+sample_effect_jointaction(State, JointAction, Effects):-
+    maplist(assertz, State),
+    sample_effect_jointaction_iter(JointAction, [], Effects),
+    maplist(retract, State), !.
+
+sample_effect_jointaction_iter([], RevEffects, Effects):-
+    reverse(RevEffects, Effects),!.
+
+sample_effect_jointaction_iter([does(Role, Action) | ActionsT], TempEffects, Effects):-
+    sample(Role, Action, Effect),
+    sample_effect_jointaction_iter(ActionsT, [Effect | TempEffects], Effects).
 
 %maplist/2 is not included in B-prolog
 maplist(_, []).

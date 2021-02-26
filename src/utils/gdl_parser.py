@@ -66,11 +66,13 @@ class GDL2ProLogParser(GDLParser):
             head = args[0]
             body = ',\n\t'.join(args[1:])
             return f"{head}:-\n\t{body}"
+        elif name == 'or':
+            return f"({args[0]};{args[1]})"
         elif name == 'not':
             return f"\+{args[0]}"
         elif name == 'true':
             return args[0]
-        elif name == 'list':
+        elif name == 'listof':
             return f"[{', '.join(args)}]"
         return f"{name}({', '.join(args)})"
 

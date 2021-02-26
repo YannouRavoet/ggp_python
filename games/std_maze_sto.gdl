@@ -54,10 +54,6 @@
 (<= (next (location gold ?x ?y))
     (location gold ?x ?y))
 
-(<= (next (location robot ?x ?y))
-    (does robot noop)
-    (location robot ?x ?y))
-
 (<= (next (location robot ?x ?yup))
     (does robot move_up)
     (location robot ?x ?y)
@@ -78,11 +74,11 @@
     (location robot ?x ?y)
     (succ ?xleft ?x))
 
+
 (<= (next (step ?s2))
     (step ?s)
     (succ ?s ?s2))
 
-(succ 0 1)
 (succ 1 2)
 (succ 2 3)
 (succ 3 4)
@@ -97,11 +93,6 @@
 (succ 12 13)
 (succ 13 14)
 (succ 14 15)
-(succ 15 16)
-(succ 16 17)
-(succ 17 18)
-(succ 18 19)
-(succ 19 20)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; LEGAL
@@ -131,11 +122,11 @@
     (succ ?xleft ?x)
     (not (location wall ?xleft ?y)))
 
+(outcome robot move_up (listof (does robot move_up)) (listof 1))
+(outcome robot move_down (listof (does robot move_down)) (listof 1))
+(outcome robot move_right (listof (does robot move_right)) (listof 1))
+(outcome robot move_left (listof (does robot move_left)) (listof 1))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; OUTCOMES
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(outcome robot ?move (listof (does robot ?move) (does robot noop)) (listof 0.8 0.2))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; GOAL
@@ -155,11 +146,12 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (<= terminal
-    (step 20))
+    (step 15))
 
 (<= terminal
     (location robot ?x ?y)
     (location gold ?x ?y))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

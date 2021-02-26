@@ -8,7 +8,7 @@ from utils.ggp.action import Action
 from utils.ggp.percept import Percept
 from utils.ggp.percepts import Percepts
 from utils.match_info import MatchInfo
-from utils.ggp.simulator import Simulator
+from utils.ggp.inferenceinterface import InferenceInterface
 from utils.messaging.message import Message
 from utils.messaging.message_type import MessageType
 from utils.messaging.message_handler import MessageHandler
@@ -42,7 +42,7 @@ class GamePlayer(HTTPServer, ABC):
     def handle_message_start(self, msg_args):
         matchid, role, gdl_rules, startclock, playclock = msg_args
         self.set_reply_deadline(startclock)
-        self.simulator = Simulator(gdl_rules)
+        self.simulator = InferenceInterface(gdl_rules)
         self.matchInfo = MatchInfo(matchid, gdl_rules, startclock, playclock, self.simulator.get_gamesettings())
         self.role = role
 
@@ -123,16 +123,16 @@ class GamePlayerSTO(GamePlayer, ABC):
         matchid, actions, deterministic_actions = msg_args
         self.set_reply_deadline(self.matchInfo.playclock)
         jointaction = self.simulator.actionlist2jointaction(actions)
-        joint_deterministic_action = self.simulator.actionlist2jointaction(deterministic_actions)
-        action = self.player_play(len(jointaction) == 0, jointaction, joint_deterministic_action, timeout=self.clock_left())
+        deterministic_jointaction = self.simulator.actionlist2jointaction(deterministic_actions)
+        action = self.player_play(len(jointaction) == 0, jointaction, deterministic_jointaction, timeout=self.clock_left())
         return Message(MessageType.ACTION, [action])
 
     def handle_message_stop(self, msg_args):
         matchid, actions, deterministic_actions = msg_args
         self.set_reply_deadline(self.matchInfo.playclock)
         jointaction = self.simulator.actionlist2jointaction(actions)
-        joint_deterministic_action = self.simulator.actionlist2jointaction(deterministic_actions)
-        goal_value = self.player_stop(jointaction, joint_deterministic_action, timeout=self.clock_left())
+        deterministic_jointaction = self.simulator.actionlist2jointaction(deterministic_actions)
+        goal_value = self.player_stop(jointaction, deterministic_jointaction, timeout=self.clock_left())
         self.matchInfo.add_result(self.role, goal_value)
         self.__init__(self.server_port)
         return Message(MessageType.DONE)

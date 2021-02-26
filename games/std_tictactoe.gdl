@@ -11,45 +11,42 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Base
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(base (cell ?x ?y ?v))
+(base (location ?v ?x ?y))
 (base (control ?p))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Initial State
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(init (cell 0 0 b))
-(init (cell 0 1 b))
-(init (cell 0 2 b))
-(init (cell 1 0 b))
-(init (cell 1 1 b))
-(init (cell 1 2 b))
-(init (cell 2 0 b))
-(init (cell 2 1 b))
-(init (cell 2 2 b))
+(init (location b 0 0))
+(init (location b 0 1))
+(init (location b 0 2))
+(init (location b 1 0))
+(init (location b 1 1))
+(init (location b 1 2))
+(init (location b 2 0))
+(init (location b 2 1))
+(init (location b 2 2))
 (init (control xplayer))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Dynamic Components
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;; Cell
-
-(<= (next (cell ?m ?n x))
+(<= (next (location x ?m ?n))
 (does xplayer (mark ?m ?n))
-(true (cell ?m ?n b)))
+(true (location b ?m ?n)))
 
-(<= (next (cell ?m ?n o))
+(<= (next (location o ?m ?n))
 (does oplayer (mark ?m ?n))
-(true (cell ?m ?n b)))
+(true (location b ?m ?n)))
 
-(<= (next (cell ?m ?n ?w))
-(true (cell ?m ?n ?w))
+(<= (next (location ?w ?m ?n))
+(true (location ?w ?m ?n))
 (distinct ?w b))
 
-(<= (next (cell ?m ?n b))
+(<= (next (location b ?m ?n))
 (does ?w (mark ?j ?k))
-(true (cell ?m ?n b))
+(true (location b ?m ?n))
 (or (distinct ?m ?j) (distinct ?n ?k)))
 
 (<= (next (control xplayer))
@@ -60,24 +57,24 @@
 
 
 (<= (row ?m ?x)
-(true (cell ?m 0 ?x))
-(true (cell ?m 1 ?x))
-(true (cell ?m 2 ?x)))
+(true (location ?x ?m 0))
+(true (location ?x ?m 1))
+(true (location ?x ?m 2)))
 
 (<= (column ?n ?x)
-(true (cell 0 ?n ?x))
-(true (cell 1 ?n ?x))
-(true (cell 2 ?n ?x)))
+(true (location ?x 0 ?n))
+(true (location ?x 1 ?n))
+(true (location ?x 2 ?n)))
 
 (<= (diagonal ?x)
-(true (cell 0 0 ?x))
-(true (cell 1 1 ?x))
-(true (cell 2 2 ?x)))
+(true (location ?x 0 0))
+(true (location ?x 1 1))
+(true (location ?x 2 2)))
 
 (<= (diagonal ?x)
-(true (cell 0 2 ?x))
-(true (cell 1 1 ?x))
-(true (cell 2 0 ?x)))
+(true (location ?x 0 2))
+(true (location ?x 1 1))
+(true (location ?x 2 0)))
 
 
 (<= (line ?x) (row ?m ?x))
@@ -86,12 +83,12 @@
 
 
 (<= open
-(true (cell ?m ?n b)))
+(true (location b ?m ?n)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (<= (legal ?w (mark ?x ?y))
-(true (cell ?x ?y b))
+(true (location b ?x ?y))
 (true (control ?w)))
 
 (<= (legal xplayer noop)

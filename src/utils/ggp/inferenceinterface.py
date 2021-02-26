@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Dict
 from utils.match_info import GameSettings
 from utils.ggp.action import Action
 from utils.ggp.jointaction import JointAction
@@ -8,7 +8,7 @@ from utils.ggp.state import State
 from utils.prolog.prolog import PrologEngine
 
 
-class SimulatorInterface:
+class I_InferenceInterface:
     """Used to make inferences with the provided set of rules. The main functionality of a Simulator is to
         1. translate Prolog query-calls to Python function calls
         2. parse the query results into States, Action, JointAction, Percepts objects.
@@ -206,19 +206,33 @@ class SimulatorInterface:
     """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
                                                     Stochastic GDL
     """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-    def get_effect(self, state: State, action: Action):
-        """Returns the effects and their corresponding probabilities of taking Action *action* in State *state*
+    def get_action_outcomes(self, state: State, stochastic_action: Action) -> Dict[Action, float]:
+        """Returns the outcomes and their corresponding probabilities of taking Action *action* in State *state*
         :param state: current state of the game
-        :param action: action for which the effects are returned
-        :return:list of tuples with the possible effect and corresponding probability"""
+        :param action: action for which the outcomes are returned
+        :return:list of tuples with the possible outcome and corresponding probability"""
         pass
 
-    def sample_effect(self, state: State, action: Action):
-        """Samples the effect of the Action *action*, in State *state* as defined by *effect/4*.
-        Return the sampled effect.
+    def legal_jointaction_sto(self, state: State) -> Dict[JointAction, Dict[JointAction, float]]:
+        """Returns all legal jointactions in state *State* and their possible outcomes and probabilities
+        :param state: current state of the game
+        :return:Dict[legal jointactions, Dict[possible outcome jointactions, corresponding probability]]"""
+        pass
+
+    def sample_outcome(self, state: State, action: Action):
+        """Samples the outcome of the Action *action*, in State *state* as defined by *outcome/4*.
+        Returns the sampled outcome.
         :param state: the current state of the game
-        :param action: action to sample the effect from
-        :return: the sampled effect"""
+        :param action: action to sample the outcome from
+        :return: the sampled outcome"""
+        pass
+
+    def sample_jointaction_outcome(self, state: State, jointaction: JointAction):
+        """Samples the outcome of the JointAction *jointaction*, in State *state* as defined by *outcome/4*.
+        Returns the sampled outcome.
+        :param state: the current state of the game
+        :param jointaction: jointaction to sample the outcome from
+        :return: the sampled outcome"""
         pass
 
     def simulate_sto(self, state: State, role: str, rounds: int, norm: bool=True) -> float:
@@ -228,7 +242,7 @@ class SimulatorInterface:
         When a terminal state is reached, the goal value of 'role' is returned.
         If *rounds* > 1, runs multiple rounds and returns the sums of the goal values in all rounds.
         If *norm* is True, all goal values are normalized. The sum is **NOT** normalized.
-        The only difference with simulate is that we have to sample the random JointAction for effects.
+        The only difference with simulate is that we have to sample the random JointAction for outcomes.
         :param state: starting state of the simulation
         :param role: role to calculate goal values for
         :param rounds: number rounds of simulation to run
@@ -238,7 +252,7 @@ class SimulatorInterface:
         pass
 
 
-class Simulator(SimulatorInterface):
+class InferenceInterface(I_InferenceInterface):
     def __init__(self, gdl_rules):
         self.engine = PrologEngine(gdl_rules)
         self.roles = self.get_roles()
@@ -272,20 +286,20 @@ class Simulator(SimulatorInterface):
 
     def get_roles(self):
         results = self.engine.query(query='roles_pl(R)')
-        return PrologEngine.results2string(results[0]['R'])
+        return PrologEngine.results2list(results[0]['R'])
 
     def get_player_roles(self):
         return list(filter(lambda r: r != 'random', self.roles))
 
     def initial_state(self):
         results = self.engine.query(query='init_pl(State)')
-        facts = PrologEngine.results2string(results[0]['State'])
+        facts = PrologEngine.results2list(results[0]['State'])
         return State(facts)
 
     def legal_actions(self, state, role):
         if not self.is_terminal(state):
             results = self.engine.query(f'legals_pl({state.to_term()}, {role}, Actions)')
-            actions = PrologEngine.results2string(results[0]['Actions'])
+            actions = PrologEngine.results2list(results[0]['Actions'])
             return [Action.from_string(action) for action in actions]
         return []  # legality of action does not depend on terminality of state in most GDL desriptions
 
@@ -298,7 +312,7 @@ class Simulator(SimulatorInterface):
     def legal_jointactions(self, state):
         if not self.is_terminal(state):
             results = self.engine.query(query=f"legal_jointaction({state.to_term()}, JA)")
-            return [JointAction([Action.from_string(action) for action in PrologEngine.results2string(result['JA'])])
+            return [JointAction([Action.from_string(action) for action in PrologEngine.results2list(result['JA'])])
                     for result in results]
         return []
 
@@ -312,10 +326,10 @@ class Simulator(SimulatorInterface):
     def next_state(self, state, jointaction):
         assert(len(jointaction) == len(self.roles))
         results = self.engine.query(f"next_pl({state.to_term()}, {jointaction.to_term()}, NextState)")
-        facts = PrologEngine.results2string(results[0]['NextState'])
+        facts = PrologEngine.results2list(results[0]['NextState'])
         return State(facts)
 
-    def simulate(self, state, role, rounds, norm=True):
+    def simulate(self, state: State, role: str, rounds: int, norm: bool=True):
         results = self.engine.query(f"simulate({state.to_term()}, {role}, Value, {rounds})")
         return self._goalnorm[role](float(results[0]['Value'])) if norm else float(results[0]['Value'])
 
@@ -353,13 +367,6 @@ class Simulator(SimulatorInterface):
                                           f"{'true' if filter_terminal else 'false'})")
         return [State(facts) for facts in results[0]['StatesOut']]
 
-    # def avg_goal(self, states, role, norm=True) -> float:
-    #     results = self.engine.query(query=f"total_goal("
-    #                                       f"[{','.join([state.to_term() for state in states])}], "
-    #                                       f"{role}, "
-    #                                       f"Goal)")
-    #     return self._goalnorm[role](results[0]['Goal'] / len(states)) if norm else results[0]['Goal'] / len(states)
-
     def filter_states_percepts_ii(self, states, jointactions, role, percepts):
         results = self.engine.query(query=f"filter_states_percepts("
                                           f"[{','.join([state.to_term() for state in states])}],"
@@ -390,20 +397,47 @@ class Simulator(SimulatorInterface):
     """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
                                                     Stochastic GDL
     """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-    def get_effect(self, state, action):
-        results = self.engine.query(query=f"effects_pl("
+    def get_action_outcomes(self, state, stochastic_action):
+        results = self.engine.query(query=f"outcome_pl("
                                           f"{state.to_term()}, "
-                                          f"{action.role}, "
-                                          f"{action.action},"
-                                          f"Effects)")
-        return [(Action.from_string(effect[0]), effect[1]) for effect in results[0]['Effects']]
+                                          f"{stochastic_action.role}, "
+                                          f"{stochastic_action.action},"
+                                          f"Outcomes)")
+        outcomes = dict()
+        for outcome in results[0]['Outcomes']:
+            outcomes[Action.from_string(outcome[0])] = outcome[1]
+        return outcomes
 
-    def sample_effect(self, state, action):
-        results = self.engine.query(query=f"sample_effect({state.to_term()}, {action.role}, {action.action}, Effect)")
-        return Action.from_string(results[0]['Effect'])
+    def legal_jointaction_sto(self, state):
+        """Returns all legal JointActions along with their Deterministic JointAction outcomes
+        and the corresponding probability."""
+        if not self.is_terminal(state):
+            results = self.engine.query(query=f"legal_jointaction_sto("
+                                              f"{state.to_term()}, "
+                                              f"JointAction,"
+                                              f"Outcomes)")
+            returndict = dict()
+            for result in results:
+                jointaction = JointAction([Action.from_string(action) for action in result['JointAction']])
+                outcomes = dict()
+                for outcome in result['Outcomes']:
+                    outcomes[JointAction([Action.from_string(action) for action in outcome[0]])] = outcome[1]
+                returndict[jointaction] = outcomes
+            return returndict
+        return []
+
+    def sample_outcome(self, state, action):
+        results = self.engine.query(query=f"sample_action_outcome({state.to_term()}, {action.role}, {action.action}, Outcome)")
+        return Action.from_string(results[0]['Outcome'])
+
+    def sample_jointaction_outcome(self, state, jointaction):
+        results = self.engine.query(query=f"sample_jointaction_outcome({state.to_term()}, {jointaction.to_term()}, Outcome)")
+        return JointAction([Action.from_string(action) for action in results[0]['Outcome']])
 
     def simulate_sto(self, state, role, rounds, norm=True):
         results = self.engine.query(f"simulate_sto({state.to_term()}, {role}, Value, {rounds})")
+        if not len(results):
+            print(results)
         return self._goalnorm[role](float(results[0]['Value'])) if norm else float(results[0]['Value'])
 
 

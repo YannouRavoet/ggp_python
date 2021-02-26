@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="mcts_ii@5601" type="PythonConfigurationType" factoryName="Python" folderName="Players">
+  <configuration default="false" name="ii_mcts@5601" type="PythonConfigurationType" factoryName="Python" folderName="Players">
     <module name="ggp_python" />
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />

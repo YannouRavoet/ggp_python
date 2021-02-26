@@ -50,7 +50,7 @@ class Grid:
     def _cell_index(self, x, y):
         return y * self.range_x + x
 
-    def set_cell_value(self, x, y, val):
+    def set_cell_value(self, val, x, y):
         indx = self._cell_index(x, y)
         self.cells[indx].value = val
 
@@ -97,33 +97,49 @@ class Board2DPrinter(PrettyPrinter):
         self.grid.empty_grid()
         non_cell_facts = list()
         for fact in state.facts:
-            m = re.match(r"cell\(([0-9]*), ([0-9]*), (\w*)\)", fact)
-            if m is None:
-                m = re.match(r"location\((\w*), ([0-9]*), ([0-9]*)\)", fact)
-                if m is not None:
-                    self.parse_cell_term(int(m.group(2)), int(m.group(3)), m.group(1)[0].upper())
-                else:
-                    non_cell_facts.append(fact)
-            elif m.group(3) != self.empty_val:
-                self.parse_cell_term(int(m.group(1)), int(m.group(2)), m.group(3)[0].upper())
+            m = re.match(r"location\((\w*), ([0-9]*), ([0-9]*)\)", fact)
+            if m is not None:
+                self.parse_cell_term(m.group(1)[0].upper(), int(m.group(2)), int(m.group(3)))
+            else:
+                non_cell_facts.append(fact)
         self.grid.print()
         [print(fact) for fact in non_cell_facts]
 
-    def parse_cell_term(self, x, y, val):
-        self.grid.set_cell_value(x, y, val)
+    def parse_cell_term(self, val, x, y):
+        self.grid.set_cell_value(val, x, y)
+
+
+class DiceGamePrinter(PrettyPrinter):
+    def _print(self, state):
+        player_dies = {'player1': list(), 'player2': list()}
+        for fact in state.facts:
+            m = re.match(r"die\((\w*), ([1-9]), ([1-9])\)", fact)
+            if m is not None:
+                player = str(m.group(1))
+                die_id = int(m.group(2))
+                die_value = int(m.group(3))
+                player_dies[player].append(die_value)
+        print("-"*30)
+        for player in player_dies:
+            print(f"{player}: {[str(die) for die in player_dies[player]]} => {sum(player_dies[player])}")
+        print("-"*30)
 
 
 class PrettyPrinterFactory:
     @staticmethod
     def make_printer(gamefile) -> PrettyPrinter:
-        if gamefile in ['std_maze.gdl', 'sto_maze.gdl']:
+        if gamefile in ['std_maze.gdl', 'std_maze_sto.gdl', 'sto_maze.gdl']:
             return Board2DPrinter(range_x=5, range_y=5, empty_val=None)
-        if gamefile == 'std_maze_medium.gdl':
+        if gamefile in ['std_maze_medium.gdl', 'std_maze_medium_sto.gdl', 'sto_maze_medium_guarded.gdl']:
             return Board2DPrinter(range_x=9, range_y=7, empty_val=None)
         if gamefile == 'std_maze_big.gdl':
             return Board2DPrinter(range_x=15, range_y=10, empty_val=None)
         if gamefile in ['std_tictactoe.gdl', 'ii_kriegtictactoe.gdl']:
             return Board2DPrinter(range_x=3, range_y=3, empty_val='b')
-        if gamefile in ['std_connectfour.gdl', 'sto_connectfour.gdl']:
+        if gamefile in ['std_connectfour.gdl', 'sto_connectfour_sto.gdl', 'sto_connectfour.gdl']:
             return Board2DPrinter(range_x=8, range_y=6, empty_val=None)
+        if gamefile in ['std_amazons.gdl', 'sto_amazons.gdl']:
+            return Board2DPrinter(range_x=10, range_y=10, empty_val=None)
+        if gamefile in ['sto_dicegame.gdl']:
+            return DiceGamePrinter()
         return PrettyPrinter()

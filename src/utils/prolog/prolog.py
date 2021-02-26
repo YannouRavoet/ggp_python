@@ -11,19 +11,10 @@ class PrologEngine:
         ggp = read_rules('src/utils/prolog/ggp.pl', cmt_token='%')                  # perfect information methods
         ggp_ii = read_rules('src/utils/prolog/ggp_ii.pl', cmt_token='%')            # imperfect information methods
         ggp_sto = read_rules('src/utils/prolog/ggp_sto.pl', cmt_token='%')          # stochastic methods
-        ggp_sto_psm = read_rules('src/utils/prolog/ggp_sto.psm', cmt_token='%')     # stochastic sampling switches
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.psm') as psm:
-            psm.write('\n'.join([game_rules, dynamics, ggp_sto_psm]))   # needs the game rules to constrain the switches
-            psm.seek(0)
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.pl') as pl:
-                pl.write(":- style_check(-singleton).\n")
-                pl.write(":- style_check(-discontiguous).\n")
-                pl.write(":- use_module(library(prism)).\n")
-                pl.write(f":- prism_start(path(prism), '{psm.name}.log').\n")
-                pl.write(f":- load_prism('{psm.name}').\n")
-                pl.write('\n'.join([game_rules, dynamics, ggp, ggp_ii, ggp_sto]))
-                pl.seek(0)
-                self.prolog.consult(pl.name)
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.pl') as pl:
+            pl.write('\n'.join([ggp, ggp_ii, ggp_sto, dynamics, game_rules]))
+            pl.seek(0)
+            self.prolog.consult(pl.name)
 
     def query(self, query):
         list(self.prolog.query('clear_engine'))
@@ -31,11 +22,11 @@ class PrologEngine:
         return results
 
     @staticmethod
-    def results2string(results):
-        return [PrologEngine.result2string(result) for result in results]
+    def results2list(results):
+        return [PrologEngine._result2string(result) for result in results]
 
     @staticmethod
-    def result2string(result):
+    def _result2string(result):
         if isinstance(result, str):
             return result
         return result.value

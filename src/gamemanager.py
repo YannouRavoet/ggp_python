@@ -13,7 +13,7 @@ from utils.messaging.message import Message
 from utils.messaging.message_type import MessageType
 from utils.messaging.message_handler import MessageHandler
 from utils.ggp.action import Action
-from utils.ggp.simulator import Simulator
+from utils.ggp.inferenceinterface import InferenceInterface
 from utils.ggp.jointaction import JointAction
 from utils.match_info import MatchInfo
 from utils.pretty_print import PrettyPrinterFactory, PrettyPrinter
@@ -27,7 +27,7 @@ class Player:
         self.role = role
         self.action = None
         self.percepts = list()  # Only used with GDL-II
-        self.deterministic_action = None      # Only used with STO-GDL
+        self.outcome = None      # Only used with STO-GDL
 
     def set_action(self, action_term):
         self.action = Action(self.role, action_term)
@@ -36,7 +36,7 @@ class Player:
 class Match(object):
     def __init__(self, matchInfo, simulator, players, state_printer):
         self.matchInfo: MatchInfo = matchInfo
-        self.simulator: Simulator = simulator
+        self.simulator: InferenceInterface = simulator
         self.players: List[Player] = players
         self.random: Player = Player(host=None, port=None, role='random')
         self.state: State = simulator.initial_state()
@@ -46,7 +46,9 @@ class Match(object):
         self.printer.print_state(self.state)
 
     def advance_state(self):
-        self.state = self.simulator.next_state(self.state, self.get_jointaction())
+        jointaction = self.get_jointaction() if not self.matchInfo.settings.has_stochastic_actions \
+            else self.get_outcomes()
+        self.state = self.simulator.next_state(self.state, jointaction)
         self.round += 1
         self.printer.print_state(self.state)
 
@@ -74,17 +76,17 @@ class Match(object):
         for pl in self.players:
             pl.percepts = self.simulator.get_percepts(self.state, self.get_jointaction(), pl.role)
 
-    def set_deterministic_actions(self):
+    def set_outcomes(self):
         """Turns stochastic player actions choices into a deterministic action."""
         for pl in self.players:
-            pl.deterministic_action = self.simulator.sample_effect(self.state, pl.action)
+            pl.outcome = self.simulator.sample_outcome(self.state, pl.action)
 
-    def get_deterministic_jointaction(self):
-        effects = list()
+    def get_outcomes(self):
+        outcomes = list()
         for pl in self.players:
-            if pl.deterministic_action is not None:   # empty for first round
-                effects.append(pl.deterministic_action)
-        return JointAction(effects)     # effects are simply deterministic versions of the actions.
+            if pl.outcome is not None:   # empty for first round
+                outcomes.append(pl.outcome)
+        return JointAction(outcomes)
 
     def save_results(self):
         for pl in self.players:
@@ -140,10 +142,10 @@ class GameManager(HTTPServer):
                           args=[matchID, self.matches[matchID].round, player.action, player.percepts])
         elif not self.matches[matchID].matchInfo.settings.has_imperfect_information:
             msg = Message(MessageType.PLAY_STO,
-                          args=[matchID, self.matches[matchID].get_jointaction(), self.matches[matchID].get_deterministic_jointaction()])
+                          args=[matchID, self.matches[matchID].get_jointaction(), self.matches[matchID].get_outcomes()])
         else:
             msg = Message(MessageType.PLAY_STO_II,
-                          args=[matchID, self.matches[matchID].round, player.action, player.deterministic_action, player.percepts])
+                          args=[matchID, self.matches[matchID].round, player.action, player.outcome, player.percepts])
         response_msg = self.send_message(player, msg)
 
         if response_msg is None:    # in case of timeouts
@@ -163,10 +165,10 @@ class GameManager(HTTPServer):
         elif not self.matches[matchID].matchInfo.settings.has_imperfect_information:
             msg = Message(MessageType.STOP_STO,
                           args=[matchID, self.matches[matchID].get_jointaction(),
-                                self.matches[matchID].get_deterministic_jointaction()])
+                                self.matches[matchID].get_outcomes()])
         else:
             msg = Message(MessageType.STOP_STO_II,
-                          args=[matchID, self.matches[matchID].round, player.action, player.deterministic_action,
+                          args=[matchID, self.matches[matchID].round, player.action, player.outcome,
                                 player.percepts])
         self.send_message(player, msg)
 
@@ -186,7 +188,7 @@ class GameManager(HTTPServer):
     def setup_match(self, game_file: str, players: List[Player], startclock: int, playclock: int):
         state_printer = PrettyPrinterFactory.make_printer(game_file)
         gdl_rules = read_rules(os.path.join('games', game_file))
-        simulator = Simulator(gdl_rules)
+        simulator = InferenceInterface(gdl_rules)
         roles = simulator.get_player_roles()
         assert (len(roles) == len(players))
         for i, role in enumerate(roles):
@@ -212,7 +214,7 @@ class GameManager(HTTPServer):
 
             # HANDLE GAME SETTINGS
             if match.matchInfo.settings.has_stochastic_actions:
-                match.set_deterministic_actions()
+                match.set_outcomes()
             if match.matchInfo.settings.has_random:
                 match.set_random_action()
             if match.matchInfo.settings.has_imperfect_information:

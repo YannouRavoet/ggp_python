@@ -1,3 +1,4 @@
 pyparsing
 stopit
+numpy
 -e git+https://github.com/yuce/pyswip@1ad3ce2d3fa4263273655f12bd9c4be07de2bd04#egg=pyswip

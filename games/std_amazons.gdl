@@ -1,0 +1,181 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; AMAZONS
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Roles
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(role white)
+(role black)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Base
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(base (location ?v ?x ?y))
+(base (control ?p))
+(base (moved ?x ?y))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; INIT Relations
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(init (location white 3 0))
+(init (location white 6 0))
+(init (location white 0 3))
+(init (location white 9 3))
+(init (location black 0 6))
+(init (location black 9 6))
+(init (location black 3 9))
+(init (location black 6 9))
+(init (control white))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; LEGAL Relations
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(<= (legal ?player noop)
+    (role ?player)
+    (not (control ?player)))
+
+(<= (legal ?player (move ?x1 ?y1 ?x2 ?y2))
+    (control ?player)
+    (location ?player ?x1 ?y1)
+    (queenmove ?x1 ?y1 ?x2 ?y2)
+    (not (moved ?x ?y)))
+
+(<= (legal ?player (shoot ?x2 ?y2 ?x3 ?y3))
+    (control ?player)
+    (moved ?x2 ?y2)
+    (queenmove ?x2 ?y2 ?x3 ?y3))
+
+(<= (queenmove ?x1 ?y1 ?x2 ?y2)
+	(direction ?dir)
+	(directionmove ?dir ?x1 ?y1 ?x2 ?y2))
+
+(<= (directionmove ?dir ?x1 ?y1 ?x2 ?y2)
+	(directionstep ?dir ?x1 ?y1 ?x2 ?y2)
+	(emptycell ?x2 ?y2))
+(<= (directionmove ?dir ?x1 ?y1 ?x3 ?y3)
+	(directionstep ?dir ?x1 ?y1 ?x2 ?y2)
+	(emptycell ?x2 ?y2)
+	(directionmove ?dir ?x2 ?y2 ?x3 ?y3))
+
+(<= (emptycell ?x ?y)
+    (cell ?x ?y)
+    (not (location ?object ?x ?y)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; NEXT Relations
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(<= (next (control ?player))
+    (control ?player)
+    (not (does ?player (shoot ?x1 ?y1 ?x2 ?y2))))
+
+(<= (next (control black))
+    (does white (shoot ?x2 ?y2 ?x3 ?y3)))
+(<= (next (control white))
+    (does black (shoot ?x2 ?y2 ?x3 ?y3)))
+
+(<= (next (location arrow ?x3 ?y3))
+    (role ?player)
+    (does ?player (shoot ?x2 ?y2 ?x3 ?y3)))
+(<= (next (location ?player ?x2 ?y2))
+    (role ?player)
+    (does ?player (move ?x1 ?y1 ?x2 ?y2)))
+(<= (next (moved ?x2 ?y2))
+    (role ?player)
+    (does ?player (move ?x1 ?y1 ?x2 ?y2)))
+(<= (next (location ?object ?x ?y))
+    (location ?object ?x ?y)
+    (not (does ?player (move ?x ?y ?x2 ?y2))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; TERMINAL Relations
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(<= terminal
+	(cannot_move ?r)
+)
+
+(<= (cannot_move ?r)
+	(control ?r)
+    (location ?r ?x1 ?y1)
+    (not (queenmove ?x1 ?y1 ?x2 ?y2))
+)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; GOAL Relations
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(<= (goal ?r 100)
+	(role ?r)
+	(cannot_move ?r2)
+	(distinct ?r ?r2)
+)
+(<= (goal ?r 0)
+    (cannot_move ?r)
+)
+
+
+(<= (directionstep n ?x ?y1 ?x ?y2)
+	(index ?x)
+    (succ ?y1 ?y2))
+(<= (directionstep s ?x ?y1 ?x ?y2)
+	(index ?x)
+    (succ ?y2 ?y1))
+(<= (directionstep e ?x1 ?y ?x2 ?y)
+	(succ ?x1 ?x2)
+	(index ?y))
+(<= (directionstep w ?x1 ?y ?x2 ?y)
+	(succ ?x2 ?x1)
+	(index ?y))
+(<= (directionstep ne ?x1 ?y1 ?x2 ?y2)
+	(succ ?x1 ?x2)
+	(succ ?y1 ?y2))
+(<= (directionstep sw ?x1 ?y1 ?x2 ?y2)
+	(succ ?x2 ?x1)
+	(succ ?y2 ?y1))
+(<= (directionstep se ?x1 ?y1 ?x2 ?y2)
+	(succ ?x1 ?x2)
+	(succ ?y2 ?y1))
+(<= (directionstep nw ?x1 ?y1 ?x2 ?y2)
+	(succ ?x2 ?x1)
+	(succ ?y1 ?y2))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; SUPPORT Relations
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(<= (distinctcell ?x1 ?y1 ?x2 ?y2)
+    (cell ?x1 ?y1)
+    (cell ?x2 ?y2)
+    (distinct ?x1 ?x2))
+(<= (distinctcell ?x1 ?y1 ?x2 ?y2)
+    (cell ?x1 ?y1)
+    (cell ?x2 ?y2)
+    (distinct ?y1 ?y2))
+
+(<= (cell ?x ?y)
+    (index ?x)
+    (index ?y))
+
+(direction n)
+(direction ne)
+(direction e)
+(direction se)
+(direction s)
+(direction sw)
+(direction w)
+(direction nw)
+
+(index 0)
+(index 1)
+(index 2)
+(index 3)
+(index 4)
+(index 5)
+(index 6)
+(index 7)
+(index 8)
+(index 9)
+
+(succ 0 1)
+(succ 1 2)
+(succ 2 3)
+(succ 3 4)
+(succ 4 5)
+(succ 5 6)
+(succ 6 7)
+(succ 7 8)
+(succ 8 9)

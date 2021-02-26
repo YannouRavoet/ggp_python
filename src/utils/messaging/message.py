@@ -41,7 +41,7 @@ class Message:
         elif message == "done":
             return Message(MessageType.DONE)
         elif message.startswith("start"):
-            m = re.match(r"start\((\w*), (\w*), ([\w\s|\\,.?()\[\]{}<>=+]*), ([0-9]*), ([0-9]*)\)", message)
+            m = re.match(r"start\((\w*), (\w*), ([\w\s|\\/,.?()\[\]{}<>=+]*), ([0-9]*), ([0-9]*)\)", message)
             matchID = m.group(1)
             role = m.group(2)
             rules = m.group(3)
@@ -54,8 +54,8 @@ class Message:
             if m is not None:
                 matchID = m.group(1)
                 actions = PrologEngine.string2list(m.group(2))
-                effects = PrologEngine.string2list(m.group(2))
-                return Message(MessageType.PLAY_STO, args=[matchID, actions, effects])
+                outcomes = PrologEngine.string2list(m.group(3))
+                return Message(MessageType.PLAY_STO, args=[matchID, actions, outcomes])
             # --- PLAY_II --- #
             m = re.match(r"play\((\w*), ([0-9]*), (.*), (\[.*])\)", message)
             if m is not None:

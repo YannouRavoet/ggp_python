@@ -16,21 +16,10 @@ if __name__ == "__main__":
     ggp = read_rules('../src/utils/prolog/ggp.pl', cmt_token='%')
     ggp_ii = read_rules('../src/utils/prolog/ggp_ii.pl', cmt_token='%')
     ggp_sto = read_rules('../src/utils/prolog/ggp_sto.pl', cmt_token='%')
-    ggp_sto_psm = read_rules('../src/utils/prolog/ggp_sto.psm', cmt_token='%')
 
-    prolog_file = '\n'.join([":- style_check(-discontiguous).",
-                             ":- style_check(-singleton).",
-                             ":- use_module(library(prism)).",
-                             ":- prism_start(path(prism)).",
-                             ":- load_prism('test_psm.psm').",
-                             prolog_rules,
-                             dynamics,
-                             ggp,
+    prolog_file = '\n'.join([ggp,
                              ggp_ii,
-                             ggp_sto])
+                             ggp_sto,
+                             dynamics,
+                             prolog_rules])
     write_rules('../test_pl.pl', prolog_file)
-
-    psm_file = '\n'.join([prolog_rules,
-                          dynamics,
-                          ggp_sto_psm])
-    write_rules('../test_psm.psm', psm_file)
