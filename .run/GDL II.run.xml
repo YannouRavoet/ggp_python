@@ -1,6 +1,0 @@
-<component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="GDL II" type="Multirun" factoryName="Multirun" separateTabs="false" reuseTabsWithFailures="true" startOneByOne="true" markFailedProcess="true" hideSuccessProcess="false" delayTime="1.0">
-    <runConfiguration name="ii_kttt" type="Python" />
-    <method v="2" />
-  </configuration>
-</component>
