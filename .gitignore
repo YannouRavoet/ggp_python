@@ -1,4 +1,5 @@
-.idea
-!.idea/runConfigurations
+.idea/*
+!.idea/runConfigurations/
 venv
 games/*.pl
+*/__pycache__/*
