@@ -46,6 +46,20 @@ goal_pl(State, Role, Value):-
     goal(Role, Value),
     maplist(retract,State),!.
 
+
+next_pl(JointAction, NextState):-
+    maplist(assertz, JointAction),
+    setof(S,next(S), NextState),
+    maplist(retract, JointAction),!.
+legal_pl(Role, Action):-
+    legals_pl(Role, Actions),
+    member(Action, Actions).
+legals_pl(Role, LegalActions):-
+    setof(does(Role,A), legal(Role,A), LegalActions),!.
+goal_pl(Role, Value):-
+    goal(Role, Value),!.
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                                                 GDL Methods                                                          %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -67,27 +81,31 @@ legal_jointaction_iter(State, [RoleH|RoleT], Temp, JointAction) :-
     legal_pl(State, RoleH, Action),
     legal_jointaction_iter(State, RoleT, [Action|Temp], JointAction).
 
-% legal_jointaction_random/2 is used to generate a random JointAction. Usefull for simulations.
-legal_jointaction_random(State, JointAction):-
+% legal_jointaction_random/1 is used to generate a random JointAction.
+% Usefull for simulations. Assumes the State is already asserted.
+legal_jointaction_random(JointAction):-
     roles_pl(Roles),
-    legal_jointaction_random_iter(State, Roles, [], JointAction).
+    legal_jointaction_random_iter(Roles, [], JointAction).
 
-legal_jointaction_random_iter(_, [], JointAction, JointAction).
-legal_jointaction_random_iter(State, [RoleH|RoleT], Temp, JointAction) :-
-    legals_pl(State, RoleH, Actions),
+legal_jointaction_random_iter([], JointAction, JointAction).
+legal_jointaction_random_iter([RoleH|RoleT], Temp, JointAction) :-
+    legals_pl(RoleH, Actions),
     random_member(Action, Actions),
-    legal_jointaction_random_iter(State, RoleT, [Action|Temp], JointAction).
+    legal_jointaction_random_iter(RoleT, [Action|Temp], JointAction).
 
 
 % simulate/3 simulates a random playthrough from the current state
 % until a terminal state is reached. It then finds the goal value
 % for the given role in that terminal state.
 simulate(State, Role, Value) :-
-    (terminal_pl(State) ->
-    	goal_pl(State, Role, Value)
+    maplist(assertz, State),
+    (terminal ->
+    	goal_pl(Role, Value),
+    	maplist(retract, State)
     ;
-    	legal_jointaction_random(State, JointAction),
-        next_pl(State, JointAction, NextState),
+    	legal_jointaction_random(JointAction),
+        next_pl(JointAction, NextState),
+        maplist(retract, State),
         simulate(NextState, Role, Value)
     ),!.
 

@@ -42,7 +42,10 @@ class GamePlayer(HTTPServer, ABC):
     def handle_message_start(self, msg_args):
         matchid, role, gdl_rules, startclock, playclock = msg_args
         self.set_reply_deadline(startclock)
-        self.simulator = InferenceInterface(gdl_rules)
+        if self.simulator is None:
+            self.simulator = InferenceInterface(gdl_rules)
+        else:
+            self.simulator.clear_engine()
         self.matchInfo = MatchInfo(matchid, gdl_rules, startclock, playclock, self.simulator.get_gamesettings())
         self.role = role
 
@@ -62,7 +65,6 @@ class GamePlayer(HTTPServer, ABC):
         jointaction = self.simulator.actionlist2jointaction(actions)
         goal_value = self.player_stop(jointaction, timeout=self.clock_left())
         self.matchInfo.add_result(self.role, goal_value)
-        self.__init__(self.server_port)
         return Message(MessageType.DONE)
 
     @staticmethod
@@ -114,7 +116,6 @@ class GamePlayerII(GamePlayer, ABC):
         percepts = Percepts([Percept(self.role, percept) for percept in percepts])
         goal_value = self.player_stop(action, percepts, timeout=self.clock_left())
         self.matchInfo.add_result(self.role, goal_value)
-        self.__init__(self.server_port)
         return Message(MessageType.DONE)
 
 
@@ -134,6 +135,5 @@ class GamePlayerSTO(GamePlayer, ABC):
         deterministic_jointaction = self.simulator.actionlist2jointaction(deterministic_actions)
         goal_value = self.player_stop(jointaction, deterministic_jointaction, timeout=self.clock_left())
         self.matchInfo.add_result(self.role, goal_value)
-        self.__init__(self.server_port)
         return Message(MessageType.DONE)
 

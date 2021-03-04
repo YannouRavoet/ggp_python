@@ -99,9 +99,6 @@ class OpenMCTSPlayerSTO(GamePlayerSTO):
         self.expl_bias: float = expl_bias  # exploration bias to use with UCB1
         self.rounds_per_loop: int = 1  # simulation rounds per expansion
 
-        self.round = 1
-        self.loops_in_round: Dict[int, int] = dict()
-
     def make_node(self, parent, stochastic_jointaction):
         """ Generates an MCTS node with parent *parent* resulting from taking jointaction *jointaction* (which results
         in state *state*). """
@@ -123,19 +120,15 @@ class OpenMCTSPlayerSTO(GamePlayerSTO):
             deterministic_jointaction: JointAction = args[1]
             self.update_root_node(stochastic_jointaction, deterministic_jointaction)
             self.state = self.root_state
-        loops = 0
         while True:
             try:
                 node = self.select(self.root_node)
                 node = self.expand(node)
                 goal_value = self.simulate(node, rounds=self.rounds_per_loop)
                 self.backprop(node, goal_value, visits=self.rounds_per_loop)
-                loops += self.rounds_per_loop
                 self.reset_state_to_root()
             except stopit.TimeoutException:
                 self.reset_state_to_root()
-                self.loops_in_round[self.round] = loops
-                self.round += 1
                 return self.action_choice()
 
     @stopit.threading_timeoutable()
@@ -143,7 +136,6 @@ class OpenMCTSPlayerSTO(GamePlayerSTO):
         stochastic_jointaction: JointAction = args[0]
         deterministic_jointaction: JointAction = args[1]
         self.update_root_node(stochastic_jointaction, deterministic_jointaction)
-        print(f"Loops per round: {self.loops_in_round}")
         return self.simulator.goal(self.root_state, self.role)
 
     def update_root_node(self, stochastic_jointaction, deterministic_jointaction):
@@ -176,8 +168,6 @@ class OpenMCTSPlayerSTO(GamePlayerSTO):
     def select(self, node):
         while not node.has_unexplored_children() and not self.simulator.is_terminal(self.state):
             best_children = node.children_maxUCB1(self.expl_bias, self.legal_sjas)
-            if not len(best_children):
-                print(best_children)
             node = random.choice(best_children)
             self.update_state(node.parent_stochastic_jointaction)
             node.update_children(self.legal_sjas)

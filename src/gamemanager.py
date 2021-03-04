@@ -2,6 +2,7 @@ import os
 import random
 import socket
 import string
+import time
 from threading import Thread
 from http.server import HTTPServer
 from http.client import HTTPConnection
@@ -27,7 +28,12 @@ class Player:
         self.role = role
         self.action = None
         self.percepts = list()  # Only used with GDL-II
-        self.outcome = None      # Only used with STO-GDL
+        self.outcome = None  # Only used with STO-GDL
+
+    def reset(self):
+        self.action = None
+        self.percepts = list()  # Only used with GDL-II
+        self.outcome = None  # Only used with STO-GDL
 
     def set_action(self, action_term):
         self.action = Action(self.role, action_term)
@@ -39,10 +45,17 @@ class Match(object):
         self.simulator: InferenceInterface = simulator
         self.players: List[Player] = players
         self.random: Player = Player(host=None, port=None, role='random')
-        self.state: State = simulator.initial_state()
+        self.state: State = None
         self.round: int = 0
 
         self.printer: PrettyPrinter = state_printer
+
+    def reset(self):
+        self.state: State = self.simulator.initial_state()
+        self.round: int = 0
+        for player in self.players:
+            player.reset()
+        self.matchInfo.reset()
         self.printer.print_state(self.state)
 
     def advance_state(self):
@@ -55,7 +68,7 @@ class Match(object):
     def get_jointaction(self):
         actions = list()
         for pl in self.players:
-            if pl.action is not None:   # empty for first round
+            if pl.action is not None:  # empty for first round
                 actions.append(pl.action)
         if self.matchInfo.settings.has_random:
             actions.append(self.random.action)
@@ -84,7 +97,7 @@ class Match(object):
     def get_outcomes(self):
         outcomes = list()
         for pl in self.players:
-            if pl.outcome is not None:   # empty for first round
+            if pl.outcome is not None:  # empty for first round
                 outcomes.append(pl.outcome)
         return JointAction(outcomes)
 
@@ -148,7 +161,7 @@ class GameManager(HTTPServer):
                           args=[matchID, self.matches[matchID].round, player.action, player.outcome, player.percepts])
         response_msg = self.send_message(player, msg)
 
-        if response_msg is None:    # in case of timeouts
+        if response_msg is None:  # in case of timeouts
             player.set_action("noop")
         else:
             player.set_action(response_msg.args[0])
@@ -200,29 +213,37 @@ class GameManager(HTTPServer):
         return matchID
 
     def run_match(self, matchID):
-        # :::::: START :::::: #
-        match = self.matches[matchID]
-        socket.setdefaulttimeout(match.matchInfo.startclock)
-        self.thread_players(matchID, self.send_start)
+        ROUNDS = 10
+        RESULTS = {'tie': 0, 'black': 0, 'white': 0}
+        for r in range(0, ROUNDS):
+            # :::::: START :::::: #
+            match = self.matches[matchID]
+            match.reset()
+            socket.setdefaulttimeout(match.matchInfo.startclock)
+            self.thread_players(matchID, self.send_start)
 
-        # :::::: PLAY :::::: #
-        socket.setdefaulttimeout(match.matchInfo.playclock)
-        while not match.simulator.is_terminal(match.state):
-            # MESSAGE PLAYERS + GET PLAYER RESPONSE ACTIONS
-            self.thread_players(matchID, self.send_play)
-            match.check_legality_of_player_actions()
+            # :::::: PLAY :::::: #
+            socket.setdefaulttimeout(match.matchInfo.playclock)
+            while not match.simulator.is_terminal(match.state):
+                # MESSAGE PLAYERS + GET PLAYER RESPONSE ACTIONS
+                self.thread_players(matchID, self.send_play)
+                match.check_legality_of_player_actions()
 
-            # HANDLE GAME SETTINGS
-            if match.matchInfo.settings.has_stochastic_actions:
-                match.set_outcomes()
-            if match.matchInfo.settings.has_random:
-                match.set_random_action()
-            if match.matchInfo.settings.has_imperfect_information:
-                match.set_percepts()
+                # HANDLE GAME SETTINGS
+                if match.matchInfo.settings.has_stochastic_actions:
+                    match.set_outcomes()
+                if match.matchInfo.settings.has_random:
+                    match.set_random_action()
+                if match.matchInfo.settings.has_imperfect_information:
+                    match.set_percepts()
 
-            # ADVANCE STATE
-            match.advance_state()
+                # ADVANCE STATE
+                match.advance_state()
 
-        # :::::: STOP :::::: #
-        self.thread_players(matchID, self.send_stop)
-        match.save_results()
+                time.sleep(0.5)
+
+            # :::::: STOP :::::: #
+            self.thread_players(matchID, self.send_stop)
+            match.save_results()
+            RESULTS[match.matchInfo.get_winner()] += 1
+            print(RESULTS)

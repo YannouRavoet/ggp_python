@@ -56,6 +56,10 @@ sample_action_outcome(State, Role, Action, Outcome):-
     sample(Role, Action, Outcome),
     maplist(retract, State), !.
 
+
+sample_jointaction_outcome(JointAction, Outcomes):-
+    sample_jointaction_outcome_iter(JointAction, [], Outcomes).
+
 sample_jointaction_outcome(State, JointAction, Outcomes):-
     maplist(assertz, State),
     sample_jointaction_outcome_iter(JointAction, [], Outcomes),
@@ -70,17 +74,16 @@ sample_jointaction_outcome_iter([does(Role, Action) | ActionsT], TempOutcomes, O
 % simulate_sto/3 simulates a random playthrough from the current state until a terminal state is reached.
 % It then finds the goal value for the given role in that terminal state.
 simulate_sto(State, Role, Value) :-
-    (terminal_pl(State) ->
-    	goal_pl(State, Role, Value)
+    maplist(assertz, State),
+    (terminal ->
+    	goal(Role, Value),
+    	maplist(retract, State)
     ;
-    	legal_jointaction_random(State, JointAction),
-    	sample_jointaction_outcome(State, JointAction, Outcomes),
-        next_pl(State, Outcomes, NextState),
-        (simulate_sto(NextState, Role, Value) ->
-            Value = Value
-        ;
-            fail
-        )
+    	legal_jointaction_random(JointAction),
+    	sample_jointaction_outcome(JointAction, Outcomes),
+        next_pl(Outcomes, NextState),
+    	maplist(retract, State),
+        simulate_sto(NextState, Role, Value)
     ),!.
 
 % simulate_sto/4 simulates multiple random playthroughs from a given state and sums up the total score for the given role.

@@ -1,3 +1,6 @@
+from typing import Dict
+
+
 class GameSettings:
     def __init__(self, random=False, imperfect_information=False, stochastic_actions=False):
         self.has_random = random
@@ -12,8 +15,27 @@ class MatchInfo(object):
         self.startclock: int = startclock
         self.playclock: int = playclock
         self.settings: GameSettings = game_settings
-        self.results: dict() = dict()
+        self.results: Dict[str, float] = dict()
 
     def add_result(self, role, goal):
         self.results[role] = goal
         print(f"goal [{role}]: {goal}")
+
+    def get_winner(self):
+        "Returns the winning role of the match as a string. If the match was a tie, returns 'tie'."
+        def match_tie():
+            match_value = list(self.results.values())[0]
+            for result in list(self.results.values()):
+                if result != match_value:
+                    return False
+            return True
+
+        if match_tie():
+            return 'tie'
+        else:
+            winner_value = max(list(self.results.values()))
+            winner = list(filter(lambda r: self.results[r] == winner_value, self.results))
+            return winner[0]
+
+    def reset(self):
+        self.results = dict()

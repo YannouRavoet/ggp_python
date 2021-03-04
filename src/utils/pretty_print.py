@@ -113,15 +113,28 @@ class DiceGamePrinter(PrettyPrinter):
     def _print(self, state):
         player_dies = {'player1': list(), 'player2': list()}
         for fact in state.facts:
+            # DIE VALUES
             m = re.match(r"die\((\w*), ([1-9]), ([1-9])\)", fact)
             if m is not None:
                 player = str(m.group(1))
                 die_id = int(m.group(2))
                 die_value = int(m.group(3))
                 player_dies[player].append(die_value)
+                continue
+            # CONTROL
+            m = re.match(r"control\((\w*)\)", fact)
+            if m is not None:
+                control = str(m.group(1))
+                continue
+            # STEP
+            m = re.match(r"step\(([1-9])\)", fact)
+            if m is not None:
+                step = str(m.group(1))
+
         print("-"*30)
         for player in player_dies:
-            print(f"{player}: {[str(die) for die in player_dies[player]]} => {sum(player_dies[player])}")
+            print(f"{player}: {[die for die in player_dies[player]]} => {sum(player_dies[player])}")
+        print(f"control: {control} - step: {step}")
         print("-"*30)
 
 
@@ -138,6 +151,8 @@ class PrettyPrinterFactory:
             return Board2DPrinter(range_x=3, range_y=3, empty_val='b')
         if gamefile in ['std_connectfour.gdl', 'sto_connectfour_sto.gdl', 'sto_connectfour.gdl']:
             return Board2DPrinter(range_x=8, range_y=6, empty_val=None)
+        if gamefile in ['std_bomberman.gdl']:
+            return Board2DPrinter(range_x=8, range_y=8, empty_val=None)
         if gamefile in ['std_amazons.gdl', 'sto_amazons.gdl']:
             return Board2DPrinter(range_x=10, range_y=10, empty_val=None)
         if gamefile in ['sto_dicegame.gdl']:

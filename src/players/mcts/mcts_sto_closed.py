@@ -34,10 +34,14 @@ class ChanceNode:
     def sample(self):
         return np.random.choice(list(self.children.values()), p=list(self.children_probs.values()))
 
+    def __repr__(self):
+        return str(f"AVG:{self.AVG():.2f}")
+
 
 class MCTSNodeSTO:
     """MCTSNodeSTO represents a node in a closed-loop MCTS built game-tree that uses ChanceNodes to model stochastic
     action effects."""
+
     def __init__(self,
                  parent, parent_stochastic_jointaction, parent_deterministic_jointaction,
                  state,
@@ -53,8 +57,8 @@ class MCTSNodeSTO:
                                                                child_jointactions[stochastic_jointaction])
 
         # --- STATS --- #
-        self.nb_visit: int = 0  # nb of times the node was visited
-        self.total_goal: float = 0  # sum of goal values the node has resulted in
+        self.nb_visit: int = 1  # nb of times the node was visited
+        self.total_goal: float = 1  # sum of goal values the node has resulted in
 
     def get_child(self, stochastic_jointaction, deterministic_jointaction):
         return self.children[stochastic_jointaction].get_child(deterministic_jointaction)
@@ -118,7 +122,7 @@ class MCTSNodeSTO:
                f' AVG={self.AVG():.2f}] '
 
     def __repr__(self):
-        return str(f"AVG:{self.AVG():.2f} - STATE:{str(self.state)}")
+        return str(f"AVG:{self.AVG():.2f}")
 
 
 class MCTSPlayerSTO(GamePlayerSTO):
@@ -126,10 +130,7 @@ class MCTSPlayerSTO(GamePlayerSTO):
         super().__init__(port)
         self.root_node: MCTSNodeSTO = None  # root node of the game tree
         self.expl_bias: float = expl_bias  # exploration bias to use with UCB1
-        self.rounds_per_loop: int = 100  # simulation rounds per expansion
-
-        self.round = 1
-        self.loops_in_round: Dict[int, int] = dict()
+        self.rounds_per_loop: int = 1  # simulation rounds per expansion
 
     def make_node(self, parent, stochastic_jointaction, deterministic_jointaction, state=None):
         """ Generates an MCTS node with parent *parent* resulting from taking jointaction *jointaction* (which results
@@ -150,24 +151,19 @@ class MCTSPlayerSTO(GamePlayerSTO):
                                         deterministic_jointaction=None,
                                         state=self.simulator.initial_state())
 
-
     @stopit.threading_timeoutable()
     def player_play(self, first_round: bool, *args, **kwargs):
         if not first_round:
             stochastic_jointaction: JointAction = args[0]
             deterministic_jointaction: JointAction = args[1]
             self.update_root_node(stochastic_jointaction, deterministic_jointaction)
-        loops = 0
         while True:
             try:
                 node = self.select(self.root_node)
                 node = self.expand(node)
                 goal_value = self.simulate(node, rounds=self.rounds_per_loop)
                 self.backprop(node, goal_value, visits=self.rounds_per_loop)
-                loops += self.rounds_per_loop
             except stopit.TimeoutException:
-                self.loops_in_round[self.round] = loops
-                self.round += 1
                 return self.action_choice()
 
     @stopit.threading_timeoutable()
@@ -175,7 +171,6 @@ class MCTSPlayerSTO(GamePlayerSTO):
         stochastic_jointaction: JointAction = args[0]
         deterministic_jointaction: JointAction = args[1]
         self.update_root_node(stochastic_jointaction, deterministic_jointaction)
-        print(f"Loops per round: {self.loops_in_round}")
         return self.simulator.goal(self.root_node.state, self.role)
 
     def update_root_node(self, stochastic_jointaction, deterministic_jointaction):
@@ -227,4 +222,3 @@ class MCTSPlayerSTO(GamePlayerSTO):
             node.nb_visit += visits
             node.total_goal += value
             self.backprop(node.parent, value, visits)
-

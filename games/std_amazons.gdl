@@ -35,14 +35,16 @@
 
 (<= (legal ?player (move ?x1 ?y1 ?x2 ?y2))
     (control ?player)
+    (not (moved ?x ?y))
     (location ?player ?x1 ?y1)
-    (queenmove ?x1 ?y1 ?x2 ?y2)
-    (not (moved ?x ?y)))
+    (queenmove ?x1 ?y1 ?x2 ?y2))
 
 (<= (legal ?player (shoot ?x2 ?y2 ?x3 ?y3))
     (control ?player)
     (moved ?x2 ?y2)
     (queenmove ?x2 ?y2 ?x3 ?y3))
+
+(outcome ?player ?move (listof (does ?player ?move)) (listof 1))
 
 (<= (queenmove ?x1 ?y1 ?x2 ?y2)
 	(direction ?dir)
@@ -87,26 +89,29 @@
 ;;; TERMINAL Relations
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (<= terminal
-	(cannot_move ?r)
-)
+	(cannot_move ?r))
 
 (<= (cannot_move ?r)
 	(control ?r)
+	(not (legalMove ?r)))
+
+(<= (legalMove ?r)
     (location ?r ?x1 ?y1)
-    (not (queenmove ?x1 ?y1 ?x2 ?y2))
-)
+    (queenmove ?x1 ?y1 ?x2 ?y2))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; GOAL Relations
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(<= (goal ?r 100)
-	(role ?r)
-	(cannot_move ?r2)
-	(distinct ?r ?r2)
-)
-(<= (goal ?r 0)
-    (cannot_move ?r)
-)
+(<= (goal white 100)
+    (control black))
+(<= (goal black 100)
+    (control white))
+
+(<= (goal white 0)
+    (control white))
+(<= (goal black 0)
+    (control black))
 
 
 (<= (directionstep n ?x ?y1 ?x ?y2)

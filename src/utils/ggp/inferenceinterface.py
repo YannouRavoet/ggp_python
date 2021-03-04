@@ -436,8 +436,6 @@ class InferenceInterface(I_InferenceInterface):
 
     def simulate_sto(self, state, role, rounds, norm=True):
         results = self.engine.query(f"simulate_sto({state.to_term()}, {role}, Value, {rounds})")
-        if not len(results):
-            print(results)
         return self._goalnorm[role](float(results[0]['Value'])) if norm else float(results[0]['Value'])
 
 

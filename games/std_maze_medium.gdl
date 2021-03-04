@@ -88,6 +88,62 @@
     (step ?s)
     (succ ?s ?s2))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; LEGAL
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(<= (legal robot move_up)
+    (location robot ?x ?y)
+    (> ?y 0)
+    (succ ?yup ?y)
+    (not (location wall ?x ?yup)))
+
+(<= (legal robot move_down)
+    (location robot ?x ?y)
+    (< ?y 6)
+    (succ ?y ?ydown)
+    (not (location wall ?x ?ydown)))
+
+(<= (legal robot move_right)
+    (location robot ?x ?y)
+    (< ?x 8)
+    (succ ?x ?xright)
+    (not (location wall ?xright ?y)))
+
+(<= (legal robot move_left)
+    (location robot ?x ?y)
+    (> ?x 0)
+    (succ ?xleft ?x)
+    (not (location wall ?xleft ?y)))
+
+(outcome ?player ?move (listof (does ?player ?move)) (listof 1))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; GOAL
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(<= (goal robot 100)
+    (location robot ?x ?y)
+    (location gold ?x ?y))
+
+(<= (goal robot 0)
+    (location robot ?x ?y)
+    (location gold ?xg ?yg)
+    (or (distinct ?x ?xg) (distinct ?y ?yg)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; TERMINAL
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(<= terminal
+    (step 30))
+
+(<= terminal
+    (location robot ?x ?y)
+    (location gold ?x ?y))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; SUPPORT
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (succ 1 2)
 (succ 2 3)
 (succ 3 4)
@@ -137,60 +193,3 @@
 (succ 47 48)
 (succ 48 49)
 (succ 49 50)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; LEGAL
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(<= (legal robot move_up)
-    (location robot ?x ?y)
-    (> ?y 0)
-    (succ ?yup ?y)
-    (not (location wall ?x ?yup)))
-
-(<= (legal robot move_down)
-    (location robot ?x ?y)
-    (< ?y 6)
-    (succ ?y ?ydown)
-    (not (location wall ?x ?ydown)))
-
-(<= (legal robot move_right)
-    (location robot ?x ?y)
-    (< ?x 8)
-    (succ ?x ?xright)
-    (not (location wall ?xright ?y)))
-
-(<= (legal robot move_left)
-    (location robot ?x ?y)
-    (> ?x 0)
-    (succ ?xleft ?x)
-    (not (location wall ?xleft ?y)))
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; GOAL
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(<= (goal robot 100)
-    (location robot ?x ?y)
-    (location gold ?x ?y))
-
-(<= (goal robot 0)
-    (location robot ?x ?y)
-    (location gold ?xg ?yg)
-    (or (distinct ?x ?xg) (distinct ?y ?yg)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; TERMINAL
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(<= terminal
-    (step 30))
-
-(<= terminal
-    (location robot ?x ?y)
-    (location gold ?x ?y))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

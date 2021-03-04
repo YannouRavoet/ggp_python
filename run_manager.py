@@ -25,10 +25,7 @@ games = {
     "connectfour_stochastic": "sto_connectfour.gdl",
     "dicegame": "sto_dicegame.gdl",
     "amazons_stochastic": "sto_amazons.gdl",
-    "maze_stochastic_guarded": "sto_maze_medium_guarded.gdl",
-    # STO DETERMINISTIC GAMES (FOR TESTING)
-    "std_maze_sto": "std_maze_sto.gdl",
-    "std_mazemedium_sto": "std_maze_medium_sto.gdl",
+    "maze_stochastic_guarded": "sto_maze_medium_guarded.gdl"
 }
 
 if __name__ == "__main__":
