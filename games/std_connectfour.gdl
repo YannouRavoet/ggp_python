@@ -36,7 +36,7 @@
     (true (control black))
     (columnOpen ?x))
 
-(outcome ?player ?move (listof (does ?player ?move)) (listof 1))
+(outcome ?player ?move (set (does ?player ?move)) (set 1))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; NEXT Relations

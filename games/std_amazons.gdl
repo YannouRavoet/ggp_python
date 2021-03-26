@@ -44,7 +44,7 @@
     (moved ?x2 ?y2)
     (queenmove ?x2 ?y2 ?x3 ?y3))
 
-(outcome ?player ?move (listof (does ?player ?move)) (listof 1))
+(outcome ?player ?move (set (does ?player ?move)) (set 1))
 
 (<= (queenmove ?x1 ?y1 ?x2 ?y2)
 	(direction ?dir)

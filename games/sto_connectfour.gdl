@@ -39,45 +39,50 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; OUTCOMES
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(outcome ?p noop (listof (does ?p noop)) (listof 1))
+(outcome ?p noop (set (does ?p noop)) (set 1))
 
 (<= (outcome ?p (drop ?col)
-        (listof (does ?p (drop ?col)) (does ?p (drop ?prev_col)) (does ?p (drop ?next_col)))
-        (listof 0.8 0.1 0.1))
+        (set (does ?p (drop ?col)) (does ?p (drop ?prev_col)) (does ?p (drop ?next_col)))
+        (set 0.8 0.1 0.1))
     (adjacent_cols ?col ?prev_col ?next_col)
     (legal ?p (drop ?prev_col))
     (legal ?p (drop ?next_col)))
 
 (<= (outcome ?p (drop ?col)
-        (listof (does ?p (drop ?col)) (does ?p (drop ?prev_col)))
-        (listof 0.85 0.15))
+        (set (does ?p (drop ?col)) (does ?p (drop ?prev_col)))
+        (set 0.85 0.15))
     (adjacent_cols ?col ?prev_col ?next_col)
     (legal ?p (drop ?prev_col))
     (not (legal ?p (drop ?next_col))))
 
 (<= (outcome ?p (drop ?col)
-        (listof (does ?p (drop ?col)) (does ?p (drop ?next_col)))
-        (listof 0.85 0.15))
+        (set (does ?p (drop ?col)) (does ?p (drop ?next_col)))
+        (set 0.85 0.15))
     (adjacent_cols ?col ?prev_col ?next_col)
     (legal ?p (drop ?next_col))
     (not (legal ?p (drop ?prev_col))))
 
 (<= (outcome ?p (drop ?col)
-        (listof (does ?p (drop ?col)))
-        (listof 1))
+        (set (does ?p (drop ?col)))
+        (set 1))
     (adjacent_cols ?col ?prev_col ?next_col)
     (not (legal ?p (drop ?prev_col)))
     (not (legal ?p (drop ?next_col))))
 
+
+(<= (adjacent_cols ?col ?prev_col ?next_col)
+    (succ ?prev_col ?col)
+    (succ ?col ?next_col))
+
 ;;; Special case for zero, since succ/2 fails for negative numbers
 (<= (outcome ?p (drop 0)
-        (listof (does ?p (drop 0)) (does ?p (drop 1)))
-        (listof 0.85 0.15))
+        (set (does ?p (drop 0)) (does ?p (drop 1)))
+        (set 0.85 0.15))
     (legal ?p (drop 1)))
 
 (<= (outcome ?p (drop 0)
-        (listof (does ?p (drop 0)))
-        (listof 1))
+        (set (does ?p (drop 0)))
+        (set 1))
     (not (legal ?p (drop 1))))
 
 (<= (adjacent_cols ?col ?prev_col ?next_col)

@@ -19,8 +19,8 @@ class OpenMCTSNodeSTO:
         self.children: Dict[JointAction, OpenMCTSNodeSTO] = dict()
 
         # --- STATS --- #
-        self.nb_visit: int = 0  # nb of times the node was visited
-        self.total_goal: float = 0  # sum of goal values the node has resulted in
+        self.nb_visit: int = 1  # nb of times the node was visited
+        self.total_goal: float = 1  # sum of goal values the node has resulted in
 
     def get_child(self, stochastic_jointaction):
         return self.children[stochastic_jointaction]
@@ -97,7 +97,7 @@ class OpenMCTSPlayerSTO(GamePlayerSTO):
         self.legal_sjas: List[JointAction] = None  # list of legal sjas in self.state (empty if terminal)
 
         self.expl_bias: float = expl_bias  # exploration bias to use with UCB1
-        self.rounds_per_loop: int = 1  # simulation rounds per expansion
+        self.rounds_per_loop: int = 2  # simulation rounds per expansion
 
     def make_node(self, parent, stochastic_jointaction):
         """ Generates an MCTS node with parent *parent* resulting from taking jointaction *jointaction* (which results
@@ -120,6 +120,7 @@ class OpenMCTSPlayerSTO(GamePlayerSTO):
             deterministic_jointaction: JointAction = args[1]
             self.update_root_node(stochastic_jointaction, deterministic_jointaction)
             self.state = self.root_state
+        loops = 0
         while True:
             try:
                 node = self.select(self.root_node)
@@ -127,8 +128,10 @@ class OpenMCTSPlayerSTO(GamePlayerSTO):
                 goal_value = self.simulate(node, rounds=self.rounds_per_loop)
                 self.backprop(node, goal_value, visits=self.rounds_per_loop)
                 self.reset_state_to_root()
+                loops += self.rounds_per_loop
             except stopit.TimeoutException:
                 self.reset_state_to_root()
+                print(f"loops {loops}")
                 return self.action_choice()
 
     @stopit.threading_timeoutable()

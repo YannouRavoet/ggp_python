@@ -33,7 +33,7 @@
     (role ?player)
     (not (control ?player)))
 
-(outcome ?player noop (listof (does ?player noop)) (listof 1))
+(outcome ?player noop (set (does ?player noop)) (set 1))
 
 (<= (legal ?player (move ?x1 ?y1 ?x2 ?y2))
     (control ?player)
@@ -41,7 +41,7 @@
     (queenmove ?x1 ?y1 ?x2 ?y2)
     (not (moved ?x ?y)))
 
-(outcome ?player (move ?x1 ?y1 ?x2 ?y2) (listof (does ?player (move ?x1 ?y1 ?x2 ?y2))) (listof 1))
+(outcome ?player (move ?x1 ?y1 ?x2 ?y2) (set (does ?player (move ?x1 ?y1 ?x2 ?y2))) (set 1))
 
 (<= (legal ?player (shoot ?x2 ?y2 ?x3 ?y3))
     (control ?player)
@@ -49,8 +49,8 @@
     (queenmove ?x2 ?y2 ?x3 ?y3))
 
 (<= (outcome ?player (shoot ?x1 ?y1 ?x2 ?y2)
-        (listof (does ?player (shoot ?x1 ?y1 ?x2 ?y2)) (does ?player miss))
-        (listof ?p_success ?p_miss))
+        (set (does ?player (shoot ?x1 ?y1 ?x2 ?y2)) (does ?player miss))
+        (set ?p_success ?p_miss))
     (diff ?x1 ?x2 ?dx)
     (diff ?y1 ?y2 ?dy)
     (max ?dx ?dy ?d)

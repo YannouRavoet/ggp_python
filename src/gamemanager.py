@@ -214,7 +214,9 @@ class GameManager(HTTPServer):
 
     def run_match(self, matchID):
         ROUNDS = 10
-        RESULTS = {'tie': 0, 'black': 0, 'white': 0}
+        RESULTS = {'tie': 0}
+        for player in self.matches[matchID].players:
+            RESULTS[player.role] = 0
         for r in range(0, ROUNDS):
             # :::::: START :::::: #
             match = self.matches[matchID]
@@ -239,8 +241,6 @@ class GameManager(HTTPServer):
 
                 # ADVANCE STATE
                 match.advance_state()
-
-                time.sleep(0.5)
 
             # :::::: STOP :::::: #
             self.thread_players(matchID, self.send_stop)

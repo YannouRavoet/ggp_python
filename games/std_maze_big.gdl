@@ -143,7 +143,7 @@
     (not (location wall ?xleft ?y)))
 
 
-(outcome ?player ?move (listof (does ?player ?move)) (listof 1))
+(outcome ?player ?move (set (does ?player ?move)) (set 1))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; GOAL
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

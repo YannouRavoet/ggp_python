@@ -51,16 +51,16 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; OUTCOMES
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(outcome ?p finishturn (listof (does ?p finishturn)) (listof 1))
-(outcome ?p noop (listof (does ?p noop)) (listof 1))
+(outcome ?p finishturn (set (does ?p finishturn)) (set 1))
+(outcome ?p noop (set (does ?p noop)) (set 1))
 (<= (outcome ?p (throw ?id)
-        (listof (does ?p (throw ?id 1))
+        (set (does ?p (throw ?id 1))
                 (does ?p (throw ?id 2))
                 (does ?p (throw ?id 3))
                 (does ?p (throw ?id 4))
                 (does ?p (throw ?id 5))
                 (does ?p (throw ?id 6)))
-        (listof ?pr ?pr ?pr ?pr ?pr ?pr))
+        (set ?pr ?pr ?pr ?pr ?pr ?pr))
     (is ?pr (/ 1 6)))
 
 

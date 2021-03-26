@@ -157,12 +157,12 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; OUTCOMES
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(<= (outcome robot ?move (listof (does robot ?move)) (listof 1))
+(<= (outcome robot ?move (set (does robot ?move)) (set 1))
     (distinct ?move attack))
 
-(<= (outcome robot attack (listof (does robot kill) (does robot die)) (listof 0.9 0.1))
+(<= (outcome robot attack (set (does robot kill) (does robot die)) (set 0.9 0.1))
     has_sword)
-(<= (outcome robot attack (listof (does robot kill) (does robot die)) (listof 0.5 0.5))
+(<= (outcome robot attack (set (does robot kill) (does robot die)) (set 0.5 0.5))
     (not has_sword))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

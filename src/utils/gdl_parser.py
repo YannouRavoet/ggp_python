@@ -72,7 +72,7 @@ class GDL2ProLogParser(GDLParser):
             return f"\+{args[0]}"
         elif name == 'true':
             return args[0]
-        elif name == 'listof':
+        elif name == 'set':
             return f"[{', '.join(args)}]"
         return f"{name}({', '.join(args)})"
 
