@@ -1,0 +1,204 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Blind Stochastic Connect Four
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; ROLE
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(role red)
+(role black)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Base
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(base (loc ?v ?x ?y))
+(base (control ?p))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; INIT Relations
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(init (control red))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; LEGAL Relations
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(<= (legal ?player noop)
+    (opp ?player ?other)
+    (control ?other))
+(<= (legal ?player (drop ?x))
+    (control ?player)
+    (columnOpen ?x))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; OUTCOMES
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(outcome ?p noop (set (does ?p noop)) (set 1))
+
+(<= (outcome ?p (drop ?col)
+        (set (does ?p (drop ?col))
+            (does ?p (drop ?prev_col))
+            (does ?p (drop ?next_col)))
+        (set 0.8 0.1 0.1))
+    (adjacent_cols ?col ?prev_col ?next_col)
+    (legal ?p (drop ?prev_col))
+    (legal ?p (drop ?next_col)))
+
+(<= (outcome ?p (drop ?col)
+        (set (does ?p (drop ?col))
+            (does ?p (drop ?prev_col)))
+        (set 0.85 0.15))
+    (adjacent_cols ?col ?prev_col ?next_col)
+    (legal ?p (drop ?prev_col))
+    (not (legal ?p (drop ?next_col))))
+
+(<= (outcome ?p (drop ?col)
+        (set (does ?p (drop ?col))
+            (does ?p (drop ?next_col)))
+        (set 0.85 0.15))
+    (adjacent_cols ?col ?prev_col ?next_col)
+    (legal ?p (drop ?next_col))
+    (not (legal ?p (drop ?prev_col))))
+
+(<= (outcome ?p (drop ?col)
+        (set (does ?p (drop ?col)))
+        (set 1))
+    (adjacent_cols ?col ?prev_col ?next_col)
+    (not (legal ?p (drop ?prev_col)))
+    (not (legal ?p (drop ?next_col))))
+
+
+(<= (adjacent_cols ?col ?prev_col ?next_col)
+    (succ ?prev_col ?col)
+    (succ ?col ?next_col))
+
+;;; Special case for zero, since succ/2 fails for negative numbers
+(<= (outcome ?p (drop 0)
+        (set (does ?p (drop 0))
+            (does ?p (drop 1)))
+        (set 0.85 0.15))
+    (legal ?p (drop 1)))
+
+(<= (outcome ?p (drop 0)
+        (set (does ?p (drop 0)))
+        (set 1))
+    (not (legal ?p (drop 1))))
+
+(<= (adjacent_cols ?col ?prev_col ?next_col)
+    (succ ?prev_col ?col)
+    (succ ?col ?next_col))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; SEES Relations
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; NEXT Relations
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(<= (next (loc ?player ?x 5))
+    (does ?player (drop ?x))
+    (columnEmpty ?x))
+(<= (next (loc ?player ?x ?y2))
+    (does ?player (drop ?x))
+    (open ?x ?y2)
+    (succ ?y2 ?y1)
+    (not (open ?x ?y1)))
+(<= (next (loc ?player ?x ?y))
+    (loc ?player ?x ?y))
+
+(<= (next (control ?other))
+    (control ?player)
+    (opp ?player ?other))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; TERMINAL Relations
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(<= terminal
+    (line red))
+(<= terminal
+    (line black))
+(<= terminal
+    (not boardOpen))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; GOAL Relations
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(<= (goal red 100)
+    (line red))
+(<= (goal red 50)
+    (not (line red))
+    (not (line black))
+    (not boardOpen))
+(<= (goal red 0)
+    (line black))
+(<= (goal red 0)
+    (not (line red))
+    (not (line black))
+    boardOpen)
+
+(<= (goal black 100)
+    (line black))
+(<= (goal black 50)
+    (not (line red))
+    (not (line black))
+    (not boardOpen))
+(<= (goal black 0)
+    (line red))
+(<= (goal black 0)
+    (not (line red))
+    (not (line black))
+    boardOpen)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; SUPPORT
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(opp red black)
+(opp black red)
+
+(<= (open ?x ?y)
+    (x ?x)
+    (y ?y)
+    (not (true (loc red ?x ?y)))
+    (not (true (loc black ?x ?y))))
+(<= (columnOpen ?x)
+    (open ?x 0))
+(<= (columnEmpty ?x)
+    (open ?x 5))
+(<= boardOpen
+    (x ?x)
+    (columnOpen ?x))
+
+(<= (line ?player)
+    (true (loc ?player ?x1 ?y))
+    (succ ?x1 ?x2)
+    (succ ?x2 ?x3)
+    (loc ?player ?x2 ?y)
+    (loc ?player ?x3 ?y))
+(<= (line ?player)
+    (true (loc ?player ?x ?y1))
+    (succ ?y1 ?y2)
+    (succ ?y2 ?y3)
+    (true (loc ?player ?x ?y2))
+    (true (loc ?player ?x ?y3)))
+(<= (line ?player)
+    (true (loc ?player ?x1 ?y1))
+    (succ ?x1 ?x2)
+    (succ ?x2 ?x3)
+    (succ ?y1 ?y2)
+    (succ ?y2 ?y3)
+    (true (loc ?player ?x2 ?y2))
+    (true (loc ?player ?x3 ?y3)))
+(<= (line ?player)
+    (true (loc ?player ?x1 ?y4))
+    (succ ?x1 ?x2)
+    (succ ?x2 ?x3)
+    (succ ?y3 ?y4)
+    (succ ?y2 ?y3)
+    (true (loc ?player ?x2 ?y3))
+    (true (loc ?player ?x3 ?y2)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Static Relations
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(x 0) (x 1) (x 2) (x 3)
+(y 0) (y 1) (y 2) (y 3)
