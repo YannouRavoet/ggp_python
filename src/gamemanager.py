@@ -158,7 +158,7 @@ class GameManager(HTTPServer):
                           args=[matchID, self.matches[matchID].get_jointaction(), self.matches[matchID].get_outcomes()])
         else:
             msg = Message(MessageType.PLAY_STO_II,
-                          args=[matchID, self.matches[matchID].round, player.action, player.outcome, player.percepts])
+                          args=[matchID, player.action, player.outcome, player.percepts])
         response_msg = self.send_message(player, msg)
 
         if response_msg is None:  # in case of timeouts
@@ -181,8 +181,7 @@ class GameManager(HTTPServer):
                                 self.matches[matchID].get_outcomes()])
         else:
             msg = Message(MessageType.STOP_STO_II,
-                          args=[matchID, self.matches[matchID].round, player.action, player.outcome,
-                                player.percepts])
+                          args=[matchID, player.action, player.outcome, player.percepts])
         self.send_message(player, msg)
 
     """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -213,37 +212,42 @@ class GameManager(HTTPServer):
         return matchID
 
     def run_match(self, matchID):
-        ROUNDS = 10
-        RESULTS = {'tie': 0}
+        # :::::: START :::::: #
+        match = self.matches[matchID]
+        match.reset()
+        socket.setdefaulttimeout(match.matchInfo.startclock)
+        self.thread_players(matchID, self.send_start)
+
+        # :::::: PLAY :::::: #
+        socket.setdefaulttimeout(match.matchInfo.playclock)
+        while not match.simulator.is_terminal(match.state):
+            # MESSAGE PLAYERS + GET PLAYER RESPONSE ACTIONS
+            self.thread_players(matchID, self.send_play)
+            match.check_legality_of_player_actions()
+
+            # HANDLE GAME SETTINGS
+            if match.matchInfo.settings.has_stochastic_actions:
+                match.set_outcomes()
+            if match.matchInfo.settings.has_random:
+                match.set_random_action()
+            if match.matchInfo.settings.has_imperfect_information:
+                match.set_percepts()
+
+            # ADVANCE STATE
+            match.advance_state()
+
+        # :::::: STOP :::::: #
+        self.thread_players(matchID, self.send_stop)
+        match.save_results()
+        return match.matchInfo
+
+    def run_matches(self, matchID, rounds=10):
+        results = dict()
         for player in self.matches[matchID].players:
-            RESULTS[player.role] = 0
-        for r in range(0, ROUNDS):
-            # :::::: START :::::: #
-            match = self.matches[matchID]
-            match.reset()
-            socket.setdefaulttimeout(match.matchInfo.startclock)
-            self.thread_players(matchID, self.send_start)
+            results[player.role] = 0
 
-            # :::::: PLAY :::::: #
-            socket.setdefaulttimeout(match.matchInfo.playclock)
-            while not match.simulator.is_terminal(match.state):
-                # MESSAGE PLAYERS + GET PLAYER RESPONSE ACTIONS
-                self.thread_players(matchID, self.send_play)
-                match.check_legality_of_player_actions()
-
-                # HANDLE GAME SETTINGS
-                if match.matchInfo.settings.has_stochastic_actions:
-                    match.set_outcomes()
-                if match.matchInfo.settings.has_random:
-                    match.set_random_action()
-                if match.matchInfo.settings.has_imperfect_information:
-                    match.set_percepts()
-
-                # ADVANCE STATE
-                match.advance_state()
-
-            # :::::: STOP :::::: #
-            self.thread_players(matchID, self.send_stop)
-            match.save_results()
-            RESULTS[match.matchInfo.get_winner()] += 1
-            print(RESULTS)
+        for r in range(0, rounds):
+            matchInfo = self.run_match(matchID)
+            results[matchInfo.get_winner()] += 1
+        results['ties'] = rounds - sum(list(results.values()))
+        print(results)

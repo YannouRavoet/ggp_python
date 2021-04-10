@@ -2,7 +2,7 @@ import sys
 
 sys.path.append("/home/yannou/git/ggp_python/src")
 import argparse
-from players.mcts import mcts, mcts_ii, mcts_sto_closed, mcts_sto_open
+from players.mcts import mcts, mcts_ii, mcts_sto_closed, mcts_sto_open, mcts_stoii_open
 from players.base import random, random_ii, legal, legal_ii, human, human_sto
 
 playerClasses = {
@@ -15,7 +15,8 @@ playerClasses = {
     'mcts_ii': mcts_ii.MCTSPlayerII,
     'human_sto': human_sto.HumanSTO,
     'mcts_sto': mcts_sto_closed.MCTSPlayerSTO,
-    'open_mcts_sto': mcts_sto_open.OpenMCTSPlayerSTO
+    'open_mcts_sto': mcts_sto_open.OpenMCTSPlayerSTO,
+    'open_mcts_stoii': mcts_stoii_open.OpenMCTSPlayerSTOII
 }
 
 if __name__ == "__main__":

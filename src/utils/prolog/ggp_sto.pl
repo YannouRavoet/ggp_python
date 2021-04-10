@@ -7,10 +7,9 @@ has_stochastic_actions :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                                           Helper Methods                                                             %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-outcome_pl(State, Role, Action, Outcomes):-
+outcome_pl(State, Role, Action, Outcomes, Probs):-
     maplist(assertz, State),
-    outcome(Role,Action, Outcome, Prob),
-    zip(Outcome, Prob, Outcomes),
+    outcome(Role,Action, Outcomes, Probs),
     maplist(retract, State),!.
 
 sample(Role, Action, Outcome):-
@@ -39,6 +38,7 @@ legal_jointaction_sto(State, JointAction, Outcomes):-
     legal_jointaction(State, JointAction),
     findall([DJA, Prob],jointaction_outcome(State, JointAction, DJA, Prob),Outcomes).
 
+
 %jointaction_outcome/4 returns a DeterministicJointAction that can result from taking JointAction in State with probability Prob.
 jointaction_outcome(State, JointAction, DeterministicJointAction, Prob):-
     jointaction_outcome_iter(State, JointAction, [], DeterministicJointAction, 1, Prob).
@@ -46,8 +46,9 @@ jointaction_outcome(State, JointAction, DeterministicJointAction, Prob):-
 jointaction_outcome_iter(_, [], RevDJA, DJA, Prob, Prob):-
     reverse(RevDJA, DJA).
 jointaction_outcome_iter(State, [does(Role, Action)|JAT], TempDJA, DJA, TempProb, Prob):-
-    outcome_pl(State, Role, Action, Outcomes),
-    member([Outcome,OutcomeProb], Outcomes),
+    outcome_pl(State, Role, Action, Outcomes, Probs),
+    zip(Outcomes, Probs, OutcomeProbMap),
+    member([Outcome,OutcomeProb], OutcomeProbMap),
     NewTempProb is TempProb * OutcomeProb,
     jointaction_outcome_iter(State, JAT, [Outcome|TempDJA], DJA, NewTempProb, Prob).
 
@@ -55,7 +56,6 @@ sample_action_outcome(State, Role, Action, Outcome):-
     maplist(assertz, State),
     sample(Role, Action, Outcome),
     maplist(retract, State), !.
-
 
 sample_jointaction_outcome(JointAction, Outcomes):-
     sample_jointaction_outcome_iter(JointAction, [], Outcomes).

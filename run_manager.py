@@ -20,12 +20,14 @@ games = {
     "meier": "ii_meier.gdl",
     "transit": "ii_transit.gdl",
     "stratego": "ii_stratego.gdl",
-    # STO GDL
+    # GDL-STO
     "maze_stochastic": "sto_maze.gdl",
     "connectfour_stochastic": "sto_connectfour.gdl",
     "dicegame": "sto_dicegame.gdl",
     "amazons_stochastic": "sto_amazons.gdl",
-    "maze_stochastic_guarded": "sto_maze_medium_guarded.gdl"
+    "maze_stochastic_guarded": "sto_maze_medium_guarded.gdl",
+    # GLD-STO-II
+    "kriegtictactoe_sto": "stoii_kriegtictactoe.gdl",
 }
 
 if __name__ == "__main__":
@@ -64,4 +66,4 @@ if __name__ == "__main__":
     """""""""""""""
     manager = GameManager(args.port)
     matchID = manager.setup_match(games[args.game], args.players, args.startclock, args.playclock)
-    manager.run_match(matchID)
+    manager.run_matches(matchID, rounds=10)

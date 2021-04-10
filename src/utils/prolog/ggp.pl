@@ -66,7 +66,7 @@ goal_pl(Role, Value):-
 % minmax_goals/3 returns the minimum and maximum goal values for a role.
 % This is used to normalize goal values between 0-1.
 minmax_goals(Role, Min, Max):-
-    findall(Goal, clause(goal(Role, Goal), _), Goals),
+    findall(Goal, clause(goal(Role, Goal), _0), Goals),
     min_list(Goals, Min),
     max_list(Goals, Max).
 

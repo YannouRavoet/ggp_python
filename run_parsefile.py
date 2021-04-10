@@ -16,10 +16,12 @@ if __name__ == "__main__":
     ggp = read_rules('../src/utils/prolog/ggp.pl', cmt_token='%')
     ggp_ii = read_rules('../src/utils/prolog/ggp_ii.pl', cmt_token='%')
     ggp_sto = read_rules('../src/utils/prolog/ggp_sto.pl', cmt_token='%')
+    ggp_stoii = read_rules('../src/utils/prolog/ggp_stoii.pl', cmt_token='%')
 
     prolog_file = '\n'.join([ggp,
                              ggp_ii,
                              ggp_sto,
+                             ggp_stoii,
                              dynamics,
                              prolog_rules])
     write_rules('../test_pl.pl', prolog_file)

@@ -31,8 +31,8 @@ class RandomPlayerII(GamePlayerII):
         self.states.append(self.simulator.initial_state())
 
     @stopit.threading_timeoutable()
-    def player_play(self, first_round, *args, **kwargs):
-        if not first_round:
+    def player_play(self, *args, **kwargs):
+        if not self.firstRound:
             self.action_hist.append(args[0])
             self.percept_hist.append(args[1])
             self.update_states()

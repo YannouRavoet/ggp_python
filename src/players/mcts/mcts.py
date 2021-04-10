@@ -105,8 +105,8 @@ class MCTSPlayer(GamePlayer):
         self.root_node = self.make_node(parent=None, jointaction=None, state=self.simulator.initial_state())
 
     @stopit.threading_timeoutable()
-    def player_play(self, first_round: bool, *args, **kwargs):
-        if not first_round:
+    def player_play(self, *args, **kwargs):
+        if not self.firstRound:
             jointaction: JointAction = args[0]
             self.update_root_node(jointaction)
 

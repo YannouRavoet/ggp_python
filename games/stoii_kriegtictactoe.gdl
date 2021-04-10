@@ -1,0 +1,136 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Krieg-Tictactoe
+;;; Sequential turn. Percepts = valid if no marker at cell, Invalid if marker at cell
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Roles
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(role white)
+(role black)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; BASE
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(base (loc ?v ?x ?y))
+(base (control ?p))
+(base (step ?s))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; INIT Relations
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(init (loc e 0 0))
+(init (loc e 0 1))
+(init (loc e 0 2))
+(init (loc e 1 0))
+(init (loc e 1 1))
+(init (loc e 1 2))
+(init (loc e 2 0))
+(init (loc e 2 1))
+(init (loc e 2 2))
+(init (step 1))
+(init (control white))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; LEGAL Relations
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(<= (legal ?p (mark ?m ?n))
+   (control ?p)
+   (loc ?c ?m ?n)
+   (distinct ?c ?p))
+(<= (legal ?p noop)
+   (not (control ?p)))
+
+(<= (validmove ?p ?m ?n)
+    (loc e ?m ?n)
+    (does ?p (mark ?m ?n)))
+
+(outcome ?role ?action (set (does ?role ?action)) (set 1))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; NEXT Relations
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(<= (next (loc ?p ?m ?n))
+    (validmove ?p ?m ?n))
+(<= (next (loc ?p ?m ?n))
+    (loc ?p ?m ?n)
+    (distinct ?p e))
+(<= (next (loc e ?m ?n))
+    (loc e ?m ?n)
+    (not (validmove ?p ?m ?n)))
+
+(<= (next (step ?n))
+   (step ?m)
+   (succ ?m ?n))
+
+(<= (next (control white))
+   (control black))
+(<= (next (control black))
+   (control white))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; SEES Relations
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(<= (sees ?p valid)
+    (validmove ?p ?m ?n))
+(<= (sees ?p invalid)
+   (does ?p (mark ?m ?n))
+   (not (validmove ?p ?m ?n)))
+
+(<= (sees ?p nothing)
+   (does ?p noop))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; TERMINAL Relations
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(<= terminal
+   (line white))
+(<= terminal
+   (line black))
+(<= terminal
+   (not open))
+
+
+(<= (line ?c)
+   (loc ?c ?m 0)
+   (loc ?c ?m 1)
+   (loc ?c ?m 2))
+
+(<= (line ?c)
+   (loc ?c 0 ?n)
+   (loc ?c 1 ?n)
+   (loc ?c 2 ?n))
+
+(<= (line ?c)
+   (loc ?c 0 0)
+   (loc ?c 1 1)
+   (loc ?c 2 2))
+(<= (line ?c)
+   (loc ?c 0 2)
+   (loc ?c 1 1)
+   (loc ?c 2 0))
+
+(<= open
+   (loc e ?m1 ?n1))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; GOAL Relations
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(<= (goal white 100)
+   (line white))
+(<= (goal white 50)
+   (not (line white))
+   (not (line black)))
+(<= (goal white 0)
+   (line black))
+
+(<= (goal black 100)
+   (line black))
+(<= (goal black 50)
+   (not (line white))
+   (not (line black)))
+(<= (goal black 0)
+   (line white))

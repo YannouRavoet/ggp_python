@@ -11,8 +11,9 @@ class PrologEngine:
         ggp = read_rules('src/utils/prolog/ggp.pl', cmt_token='%')                  # perfect information methods
         ggp_ii = read_rules('src/utils/prolog/ggp_ii.pl', cmt_token='%')            # imperfect information methods
         ggp_sto = read_rules('src/utils/prolog/ggp_sto.pl', cmt_token='%')          # stochastic methods
+        ggp_stoii = read_rules('src/utils/prolog/ggp_stoii.pl', cmt_token='%')      # stochastic ii methods
         with tempfile.NamedTemporaryFile(mode='w', suffix='.pl') as pl:
-            pl.write('\n'.join([ggp, ggp_ii, ggp_sto, dynamics, game_rules]))
+            pl.write('\n'.join([ggp, ggp_ii, ggp_sto, ggp_stoii, dynamics, game_rules]))
             pl.seek(0)
             self.prolog.consult(pl.name)
 

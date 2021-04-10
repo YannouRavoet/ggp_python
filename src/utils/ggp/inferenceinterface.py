@@ -177,6 +177,14 @@ class I_InferenceInterface:
         """
         pass
 
+    def avg_goal(self, role: str, states: List[State], norm: bool = True) -> float:
+        """Calculates the average goal for role in all of states' states.
+        :param role: role of the player
+        :param states: List of terminal states
+        :param norm: whether or not to normalize the result
+        :return: average goal states."""
+        pass
+
     def avg_goal_from_hist(self, action_hist: List[Action], percept_hist: List[Percepts], role: str,
                            norm: bool = True) -> float:
         """Create the complete set of valid terminal states from the given Action history *action_hist* and
@@ -204,8 +212,9 @@ class I_InferenceInterface:
         pass
 
     """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-                                                    Stochastic GDL
+                                                    GDL-STO
     """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
     def get_action_outcomes(self, state: State, stochastic_action: Action) -> Dict[Action, float]:
         """Returns the outcomes and their corresponding probabilities of taking Action *action* in State *state*
         :param state: current state of the game
@@ -235,7 +244,7 @@ class I_InferenceInterface:
         :return: the sampled outcome"""
         pass
 
-    def simulate_sto(self, state: State, role: str, rounds: int, norm: bool=True) -> float:
+    def simulate_sto(self, state: State, role: str, rounds: int, norm: bool = True) -> float:
         """
         Simulates the game starting from the given State *state*, selecting a random JointAction at every consecutive
         state until a terminal state is reached.
@@ -249,6 +258,16 @@ class I_InferenceInterface:
         :param norm: whether or not to normalize the goal values
         :return: sum of goal values across all simulation rounds
         """
+        pass
+
+    """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+                                                    GDL-STO-II
+    """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+    def legal_sjas_from_states(self, states: List[State]):
+        """ Finds and combines the legal jointactions for each state in states
+        :param states: List of current possible states of the game
+        :return: all legal jointactions"""
         pass
 
 
@@ -324,12 +343,12 @@ class InferenceInterface(I_InferenceInterface):
         return self._goalnorm[role](results[0]['Value']) if norm else results[0]['Value']
 
     def next_state(self, state, jointaction):
-        assert(len(jointaction) == len(self.roles))
+        assert (len(jointaction) == len(self.roles))
         results = self.engine.query(f"next_pl({state.to_term()}, {jointaction.to_term()}, NextState)")
         facts = PrologEngine.results2list(results[0]['NextState'])
         return State(facts)
 
-    def simulate(self, state: State, role: str, rounds: int, norm: bool=True):
+    def simulate(self, state: State, role: str, rounds: int, norm: bool = True):
         results = self.engine.query(f"simulate({state.to_term()}, {role}, Value, {rounds})")
         return self._goalnorm[role](float(results[0]['Value'])) if norm else float(results[0]['Value'])
 
@@ -378,6 +397,13 @@ class InferenceInterface(I_InferenceInterface):
             return []
         return results[0]['Indices']
 
+    def avg_goal(self, role, states, norm=True):
+        results = self.engine.query(query=f"avg_goal("
+                                          f"[{','.join([state.to_term() for state in states])}],"
+                                          f"{role},"
+                                          f"AvgGoal)")
+        return self._goalnorm[role](results[0]['AvgGoal']) if norm else results[0]['AvgGoal']
+
     def avg_goal_from_hist(self, action_hist, percept_hist, role, norm=True):
         results = self.engine.query(query=f"avg_goal_from_history("
                                           f"[{','.join([action.to_term() for action in action_hist])}],"
@@ -395,8 +421,9 @@ class InferenceInterface(I_InferenceInterface):
         return [self._goalnorm[role](float(result)) if norm else float(result) for result in results[0]['Values']]
 
     """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-                                                    Stochastic GDL
+                                                    GDL-STO
     """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
     def get_action_outcomes(self, state, stochastic_action):
         results = self.engine.query(query=f"outcome_pl("
                                           f"{state.to_term()}, "
@@ -427,16 +454,40 @@ class InferenceInterface(I_InferenceInterface):
         return []
 
     def sample_outcome(self, state, action):
-        results = self.engine.query(query=f"sample_action_outcome({state.to_term()}, {action.role}, {action.action}, Outcome)")
+        results = self.engine.query(
+            query=f"sample_action_outcome({state.to_term()}, {action.role}, {action.action}, Outcome)")
         return Action.from_string(results[0]['Outcome'])
 
     def sample_jointaction_outcome(self, state, jointaction):
-        results = self.engine.query(query=f"sample_jointaction_outcome({state.to_term()}, {jointaction.to_term()}, Outcome)")
+        results = self.engine.query(
+            query=f"sample_jointaction_outcome({state.to_term()}, {jointaction.to_term()}, Outcome)")
         return JointAction([Action.from_string(action) for action in results[0]['Outcome']])
 
     def simulate_sto(self, state, role, rounds, norm=True):
         results = self.engine.query(f"simulate_sto({state.to_term()}, {role}, Value, {rounds})")
         return self._goalnorm[role](float(results[0]['Value'])) if norm else float(results[0]['Value'])
 
+    """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+                                                    GDL-STO-II
+    """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
+    def legal_sjas_from_states(self, states: List[State]):
+        results = self.engine.query(query=f"legal_jointaction_states("
+                                          f"[{','.join([state.to_term() for state in states])}],"
+                                          f"JointActions)")
+        return [JointAction([Action.from_string(action)
+                             for action in jointaction])
+                for jointaction in results[0]['JointActions']]
 
+    def update_states_stoii(self, states: List[State], stochastic_action: Action, deterministic_action: Action,
+                            percepts: Percepts, terminal: bool):
+        results = self.engine.query(f"update_states("
+                                    f"[{','.join([state.to_term() for state in states])}], "
+                                    f"{stochastic_action.to_term()},"
+                                    f"{deterministic_action.to_term()},"
+                                    f"{percepts.to_term()},"
+                                    f"{'true' if terminal else 'false'},"
+                                    f"NewStates)")
+        if len(results) == 0:
+            print('empty results')
+        return [State(facts) for facts in results[0]['NewStates']]

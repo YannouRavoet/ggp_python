@@ -2,6 +2,12 @@ import re
 from utils.prolog.prolog import PrologEngine
 from utils.messaging.message_type import MessageType
 
+RE_MATCHID = "(\w*)"
+RE_ROUND = RE_PLAYCLOCK = RE_STARTCLOCK = "([0-9]*)"
+RE_JOINTACTION = RE_OUTCOMES = RE_PERCEPTS = "(\[.*])"
+RE_ACTION = RE_OUTCOME = "([\w\s(),]*)"
+RE_ROLE = "(.*)"
+RE_RULES = "([\w\s|\\/,.?()\[\]<>=+]*)"
 
 class Message:
     def __init__(self, messagetype, args=None):
@@ -41,7 +47,7 @@ class Message:
         elif message == "done":
             return Message(MessageType.DONE)
         elif message.startswith("start"):
-            m = re.match(r"start\((\w*), (\w*), ([\w\s|\\/,.?()\[\]{}<>=+]*), ([0-9]*), ([0-9]*)\)", message)
+            m = re.match(rf"start\({RE_MATCHID}, {RE_ROLE}, {RE_RULES}, {RE_STARTCLOCK}, {RE_PLAYCLOCK}\)", message)
             matchID = m.group(1)
             role = m.group(2)
             rules = m.group(3)
@@ -49,15 +55,23 @@ class Message:
             playclock = int(m.group(5))
             return Message(MessageType.START, args=[matchID, role, rules, startclock, playclock])
         elif message.startswith("play"):
+            # --- PLAY_STO_II --- #
+            m = re.match(rf"play\({RE_MATCHID}, {RE_ACTION}, {RE_OUTCOME}, {RE_PERCEPTS}\)", message)
+            if m is not None:
+                matchID = m.group(1)
+                action = m.group(2)
+                outcome = m.group(3)
+                percepts = PrologEngine.string2list(m.group(4))
+                return Message(MessageType.PLAY_STO_II, args=[matchID, action, outcome, percepts])
             # --- PLAY_STO --- #
-            m = re.match(r"play\((\w*), (\[.*]), (\[.*])\)", message)
+            m = re.match(rf"play\({RE_MATCHID}, {RE_JOINTACTION}, {RE_OUTCOMES}\)", message)
             if m is not None:
                 matchID = m.group(1)
                 actions = PrologEngine.string2list(m.group(2))
                 outcomes = PrologEngine.string2list(m.group(3))
                 return Message(MessageType.PLAY_STO, args=[matchID, actions, outcomes])
             # --- PLAY_II --- #
-            m = re.match(r"play\((\w*), ([0-9]*), (.*), (\[.*])\)", message)
+            m = re.match(rf"play\({RE_MATCHID}, {RE_ROUND}, {RE_ACTION}, {RE_PERCEPTS}\)", message)
             if m is not None:
                 matchID = m.group(1)
                 round = m.group(2)
@@ -65,21 +79,29 @@ class Message:
                 percepts = PrologEngine.string2list(m.group(4))
                 return Message(MessageType.PLAY_II, args=[matchID, round, action, percepts])
             # --- PLAY --- #
-            m = re.match(r"play\((\w*), (\[.*])\)", message)
+            m = re.match(rf"play\({RE_MATCHID}, {RE_JOINTACTION}\)", message)
             if m is not None:
                 matchID = m.group(1)
                 actions = PrologEngine.string2list(m.group(2))
                 return Message(MessageType.PLAY, args=[matchID, actions])
         elif message.startswith("stop"):
+            # --- STOP_STO_II --- #
+            m = re.match(rf"stop\({RE_MATCHID}, {RE_ACTION}, {RE_OUTCOME}, {RE_PERCEPTS}\)", message)
+            if m is not None:
+                matchID = m.group(1)
+                action = m.group(2)
+                outcome = m.group(3)
+                percepts = PrologEngine.string2list(m.group(4))
+                return Message(MessageType.STOP_STO_II, args=[matchID, action, outcome, percepts])
             # --- STOP_STO --- #
-            m = re.match(r"stop\((\w*), (\[.*]), (\[.*])\)", message)
+            m = re.match(rf"stop\({RE_MATCHID}, {RE_JOINTACTION}, {RE_OUTCOMES}\)", message)
             if m is not None:
                 matchID = m.group(1)
                 actions = PrologEngine.string2list(m.group(2))
                 effects = PrologEngine.string2list(m.group(2))
                 return Message(MessageType.STOP_STO, args=[matchID, actions, effects])
             # --- STOP_II --- #
-            m = re.match(r"stop\((\w*), ([0-9]*), (.*), (\[.*])\)", message)
+            m = re.match(rf"stop\({RE_MATCHID}, {RE_ROUND}, {RE_ACTION}, {RE_PERCEPTS}\)", message)
             if m is not None:
                 matchID = m.group(1)
                 round = m.group(2)
@@ -87,7 +109,7 @@ class Message:
                 percepts = PrologEngine.string2list(m.group(4))
                 return Message(MessageType.STOP_II, args=[matchID, round, action, percepts])
             # --- STOP --- #
-            m = re.match(r"stop\((\w*), (\[.*])\)", message)
+            m = re.match(rf"stop\({RE_MATCHID}, {RE_JOINTACTION}\)", message)
             if m is not None:
                 matchID = m.group(1)
                 actions = PrologEngine.string2list(m.group(2))

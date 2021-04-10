@@ -97,7 +97,7 @@ class Board2DPrinter(PrettyPrinter):
         self.grid.empty_grid()
         non_cell_facts = list()
         for fact in state.facts:
-            m = re.match(r"location\((\w*), ([0-9]*), ([0-9]*)\)", fact)
+            m = re.match(r"loc\((\w*), ([0-9]*), ([0-9]*)\)", fact)
             if m is not None:
                 self.parse_cell_term(m.group(1)[0].upper(), int(m.group(2)), int(m.group(3)))
             else:
@@ -147,8 +147,8 @@ class PrettyPrinterFactory:
             return Board2DPrinter(range_x=9, range_y=7, empty_val=None)
         if gamefile == 'std_maze_big.gdl':
             return Board2DPrinter(range_x=15, range_y=10, empty_val=None)
-        if gamefile in ['std_tictactoe.gdl', 'ii_kriegtictactoe.gdl']:
-            return Board2DPrinter(range_x=3, range_y=3, empty_val='b')
+        if gamefile in ['std_tictactoe.gdl', 'ii_kriegtictactoe.gdl', 'stoii_kriegtictactoe.gdl']:
+            return Board2DPrinter(range_x=3, range_y=3, empty_val='e')
         if gamefile in ['std_connectfour.gdl', 'sto_connectfour_sto.gdl', 'sto_connectfour.gdl']:
             return Board2DPrinter(range_x=8, range_y=6, empty_val=None)
         if gamefile in ['std_bomberman.gdl']:

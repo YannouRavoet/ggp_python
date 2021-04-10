@@ -47,7 +47,7 @@ setof(does(Role,A), legal(Role,A), LegalActions),!.
 goal_pl(Role, Value):-
 goal(Role, Value),!.
 minmax_goals(Role, Min, Max):-
-findall(Goal, clause(goal(Role, Goal), _), Goals),
+findall(Goal, clause(goal(Role, Goal), _0), Goals),
 min_list(Goals, Min),
 max_list(Goals, Max).
 legal_jointaction(State, JointAction) :-
@@ -96,6 +96,13 @@ maplist(assertz, JointAction),
 setof(sees(Role,P), sees(Role,P), Percepts),
 maplist(retract, State),
 maplist(retract, JointAction),!.
+legal_jointaction_states(States, JAS):-
+legal_jointaction_states(States, [], JAS).
+legal_jointaction_states([], JAS, JAS).
+legal_jointaction_states([StatesH|StatesT], TempJAS, JAS):-
+setof(JA, legal_jointaction(StatesH, JA), StateJAS),
+ord_union(TempJAS, StateJAS, NewTempJAS),
+legal_jointaction_states(StatesT, NewTempJAS, JAS).
 update_valid_states(StatesIn, Action, Percepts, StatesOut, Terminal):-
 update_valid_states(StatesIn, Action, Percepts, [], StatesOut, Terminal).
 update_valid_states([], _, _, TempStates, StatesOut, Terminal):-
@@ -165,6 +172,10 @@ total_goal([StatesH|StatesT], Role, Temp, Goal):-
 goal_pl(StatesH, Role, NewGoal),
 NewTemp is Temp + NewGoal,
 total_goal(StatesT, Role, NewTemp, Goal).
+avg_goal(States, Role, AvgGoal):-
+total_goal(States, Role, Goal),
+length(States, L),
+AvgGoal is div(Goal, L).
 filter_states_percepts(States, JointActions, Role, Percepts, Indices):-
 filter_states_percepts(States, JointActions, Role, Percepts, 0, [], Indices).
 filter_states_percepts([], [], _, _, _, Indices, Indices):- !.
@@ -176,11 +187,9 @@ filter_states_percepts(StatesT, JointActionsT, Role, Percepts, NewInd, [CurInd|T
 ;
 filter_states_percepts(StatesT, JointActionsT, Role, Percepts, NewInd, TempInds, Indices)
 ).
-avg_goal_from_history(ActionHist, PerceptHist, Role, Goal):-
+avg_goal_from_history(ActionHist, PerceptHist, Role, AvgGoal):-
 create_valid_states(ActionHist, PerceptHist, StatesOut, true),
-total_goal(StatesOut, Role, GoalSum),
-length(StatesOut, L),
-Goal is div(GoalSum, L).
+avg_goal(StatesOut, Role, AvgGoal).
 simulate_multi(States, Role, Rounds, Values):-
 simulate_multi(States, Role, Rounds, [], Values).
 simulate_multi([],_,_,TempValues, Values):-
@@ -190,10 +199,9 @@ simulate(StatesH, Role, Value, Rounds),
 simulate_multi(StatesT, Role, Rounds, [Value|TempValues], Values).
 has_stochastic_actions :-
 clause(outcome(_,_,_,_), _), !.
-outcome_pl(State, Role, Action, Outcomes):-
+outcome_pl(State, Role, Action, Outcomes, Probs):-
 maplist(assertz, State),
-outcome(Role,Action, Outcome, Prob),
-zip(Outcome, Prob, Outcomes),
+outcome(Role,Action, Outcomes, Probs),
 maplist(retract, State),!.
 sample(Role, Action, Outcome):-
 outcome(Role, Action, Outcomes, Probs),
@@ -217,8 +225,9 @@ jointaction_outcome_iter(State, JointAction, [], DeterministicJointAction, 1, Pr
 jointaction_outcome_iter(_, [], RevDJA, DJA, Prob, Prob):-
 reverse(RevDJA, DJA).
 jointaction_outcome_iter(State, [does(Role, Action)|JAT], TempDJA, DJA, TempProb, Prob):-
-outcome_pl(State, Role, Action, Outcomes),
-member([Outcome,OutcomeProb], Outcomes),
+outcome_pl(State, Role, Action, Outcomes, Probs),
+zip(Outcomes, Probs, OutcomeProbMap),
+member([Outcome,OutcomeProb], OutcomeProbMap),
 NewTempProb is TempProb * OutcomeProb,
 jointaction_outcome_iter(State, JAT, [Outcome|TempDJA], DJA, NewTempProb, Prob).
 sample_action_outcome(State, Role, Action, Outcome):-
@@ -256,11 +265,38 @@ simulate_sto(State, Role, NewValue),
 NewTemp is Temp + NewValue,
 NewRounds is Rounds - 1,
 simulate_sto_iter(State, Role, NewTemp, Total, NewRounds).
+update_states(States, SAction, DAction, Percepts, Terminal, NewStates):-
+update_states_iter(States, SAction, DAction, Percepts, Terminal, [], NewStates).
+update_states_iter([], _, _, _, _, NewStates, NewStates).
+update_states_iter([StatesH|StatesT], SAction, DAction, Percepts, Terminal, TempNewStates, FinalNewStates):-
+update_state(StatesH, SAction, DAction, Percepts, Terminal, NewStates),
+ord_union(NewStates, TempNewStates, NewTempNewStates),
+update_states_iter(StatesT, SAction, DAction, Percepts, Terminal, NewTempNewStates, FinalNewStates).
+update_state(State, SAction, DAction, Percepts, Terminal, NewStates):-
+setof(SJA, legal_jointaction_complete(State, SAction, SJA), SJAS), %filtered so that the player action choice is the same
+setof(DJA, (member(SJA, SJAS), sja_to_dja(State, SJA, DAction, Percepts, DJA)), DJAS), %filtered so that player action outcome is the same and the percepts are the same
+(Terminal ->
+setof(NextState, (member(DJA, DJAS), next_pl(State, DJA, NextState), terminal_pl(NextState)), NewStates)
+;
+setof(NextState, (member(DJA, DJAS), next_pl(State, DJA, NextState), \+terminal_pl(NextState)), NewStates)
+).
+sja_to_dja(State, SJA, DAction, Percepts, DJA):-
+sja_to_dja_iter(State, SJA, DAction, Percepts, [], DJA).
+sja_to_dja_iter(State, [], does(Role, _), Percepts, DJA, DJA):-
+sees_pl(State, DJA, Role, Percepts).
+sja_to_dja_iter(State, [does(RoleX, SAction)|SJAT], does(Role, DAction), Percepts, TempDJA, DJA):-
+(Role = RoleX ->
+sja_to_dja_iter(State, SJAT, does(Role, DAction), Percepts, [does(Role, DAction)|TempDJA], DJA)
+;
+outcome_pl(State, RoleX, SAction, Outcomes, _),
+member(DA, Outcomes),
+sja_to_dja_iter(State, SJAT, does(Role, DAction), Percepts, [DA|TempDJA], DJA)
+).
 :- dynamic does/2,  %input
-location/3, step/1, %maze
-location/3, step/1, has_sword/0, robot_dead/0,%maze_guarded
-location/3, control/1, %tictactoe
-location/3, control/1, %connectfour
+loc/3, step/1, %maze
+loc/3, step/1, has_sword/0, robot_dead/0,%maze_guarded
+loc/3, control/1, %tictactoe
+loc/3, control/1, %connectfour
 clear/1, on/2, table_top/1, step/1, %blocks
 clear/1, on/2, lifted/1, step/1, %blocks2p
 location/3, blockednorth/2, blockedeast/2, step/1, %bomberman
@@ -270,161 +306,91 @@ control/1, location/3, step/1, %transit
 rolling_for/1, previous_claimed_values/2, has_dice/3,claiming/1, guessing/1, game_over/1, %ii_meier.gdl
 turn/1, step/1, location/3, inPool/2, occupied/3,%stratego
 control/1, location/3, moved/2, %amazons
-die/3, control/1, step/1, throwndie/2. %dicegame
+die/3, control/1, step/1, throwndie/2, %dicegame
+loc/3, step/1, control/1. %kttt_sto
 role(white).
 role(black).
-base(location(_v, _x, _y)).
+base(loc(_v, _x, _y)).
 base(control(_p)).
-base(moved(_x, _y)).
-init(location(white, 3, 0)).
-init(location(white, 6, 0)).
-init(location(white, 0, 3)).
-init(location(white, 9, 3)).
-init(location(black, 0, 6)).
-init(location(black, 9, 6)).
-init(location(black, 3, 9)).
-init(location(black, 6, 9)).
+base(step(_s)).
+init(loc(b, 0, 0)).
+init(loc(b, 0, 1)).
+init(loc(b, 0, 2)).
+init(loc(b, 1, 0)).
+init(loc(b, 1, 1)).
+init(loc(b, 1, 2)).
+init(loc(b, 2, 0)).
+init(loc(b, 2, 1)).
+init(loc(b, 2, 2)).
+init(step(1)).
 init(control(white)).
-legal(_player, noop):-
-	role(_player),
-	\+control(_player).
-outcome(_player, noop, [does(_player, noop)], [1]).
-legal(_player, move(_x1, _y1, _x2, _y2)):-
-	control(_player),
-	location(_player, _x1, _y1),
-	queenmove(_x1, _y1, _x2, _y2),
-	\+moved(_x, _y).
-outcome(_player, move(_x1, _y1, _x2, _y2), [does(_player, move(_x1, _y1, _x2, _y2))], [1]).
-legal(_player, shoot(_x2, _y2, _x3, _y3)):-
-	control(_player),
-	moved(_x2, _y2),
-	queenmove(_x2, _y2, _x3, _y3).
-outcome(_player, shoot(_x1, _y1, _x2, _y2), [does(_player, shoot(_x1, _y1, _x2, _y2)), does(_player, miss)], [_p_success, _p_miss]):-
-	diff(_x1, _x2, _dx),
-	diff(_y1, _y2, _dy),
-	max(_dx, _dy, _d),
-	diff(_d, 10, _chance),
-	is(_p_success, /(_chance, 10)),
-	is(_p_miss, /(_d, 10)).
-diff(_x1, _x1, 0).
-diff(_x1, 0, _x1).
-diff(_x1, _x2, _d):-
-	gt(_x2, _x1),
-	diff(_x2, _x1, _d).
-diff(_x1, _x2, _d):-
-	gt(_x1, _x2),
-	succ(_x1m, _x1),
-	succ(_x2m, _x2),
-	diff(_x1m, _x2m, _d).
-queenmove(_x1, _y1, _x2, _y2):-
-	direction(_dir),
-	directionmove(_dir, _x1, _y1, _x2, _y2).
-directionmove(_dir, _x1, _y1, _x2, _y2):-
-	directionstep(_dir, _x1, _y1, _x2, _y2),
-	emptycell(_x2, _y2).
-directionmove(_dir, _x1, _y1, _x3, _y3):-
-	directionstep(_dir, _x1, _y1, _x2, _y2),
-	emptycell(_x2, _y2),
-	directionmove(_dir, _x2, _y2, _x3, _y3).
-emptycell(_x, _y):-
-	cell(_x, _y),
-	\+location(_object, _x, _y).
-next(control(_player)):-
-	control(_player),
-	\+does(_player, shoot(_x1, _y1, _x2, _y2)),
-	\+does(_player, miss).
-next(control(black)):-
-	(does(white, shoot(_x2, _y2, _x3, _y3));does(white, miss)).
+legal(_p, mark(_m, _n)):-
+	control(_p),
+	loc(_c, _m, _n),
+	distinct(_c, _p).
+legal(_p, noop):-
+	\+control(_p).
+validmove(_p, _m, _n):-
+	does(_p, mark(_m, _n)),
+	loc(_b, _m, _n).
+outcome(_role, _action, [does(_role, _action)], [1]).
+next(loc(_p, _m, _n)):-
+	validmove(_p, _m, _n).
+next(loc(_p, _m, _n)):-
+	loc(_p, _m, _n),
+	distinct(_p, b).
+next(loc(b, _m, _n)):-
+	loc(b, _m, _n),
+	\+validmove(_p, _m, _n).
+next(step(_n)):-
+	step(_m),
+	succ(_m, _n).
 next(control(white)):-
-	(does(black, shoot(_x2, _y2, _x3, _y3));does(black, miss)).
-next(location(arrow, _x3, _y3)):-
-	role(_player),
-	does(_player, shoot(_x2, _y2, _x3, _y3)).
-next(location(_player, _x2, _y2)):-
-	role(_player),
-	does(_player, move(_x1, _y1, _x2, _y2)).
-next(moved(_x2, _y2)):-
-	role(_player),
-	does(_player, move(_x1, _y1, _x2, _y2)).
-next(location(_object, _x, _y)):-
-	location(_object, _x, _y),
-	\+does(_player, move(_x, _y, _x2, _y2)).
+	control(black).
+next(control(black)):-
+	control(white).
+sees(_p, valid):-
+	validmove(_p, _m, _n).
+sees(_p, invalid):-
+	does(_p, mark(_m, _n)),
+	\+validmove(_p, _m, _n).
+sees(_p, nothing):-
+	does(_p, noop).
 terminal:-
-	control(_r),
-	\+legalMove(_r).
-legalMove(_r):-
-	location(_r, _x1, _y1),
-	queenmove(_x1, _y1, _x2, _y2).
+	line(white).
+terminal:-
+	line(black).
+terminal:-
+	\+open.
+line(_c):-
+	loc(_c, _m, 0),
+	loc(_c, _m, 1),
+	loc(_c, _m, 2).
+line(_c):-
+	loc(_c, 0, _n),
+	loc(_c, 1, _n),
+	loc(_c, 2, _n).
+line(_c):-
+	loc(_c, 0, 0),
+	loc(_c, 1, 1),
+	loc(_c, 2, 2).
+line(_c):-
+	loc(_c, 0, 2),
+	loc(_c, 1, 1),
+	loc(_c, 2, 0).
+open:-
+	loc(b, _m1, _n1).
 goal(white, 100):-
-	control(black).
-goal(black, 100):-
-	control(white).
+	line(white).
+goal(white, 50):-
+	\+line(white),
+	\+line(black).
 goal(white, 0):-
-	control(white).
+	line(black).
+goal(black, 100):-
+	line(black).
+goal(black, 50):-
+	\+line(white),
+	\+line(black).
 goal(black, 0):-
-	control(black).
-directionstep(n, _x, _y1, _x, _y2):-
-	index(_x),
-	succ(_y1, _y2).
-directionstep(s, _x, _y1, _x, _y2):-
-	index(_x),
-	succ(_y2, _y1).
-directionstep(e, _x1, _y, _x2, _y):-
-	succ(_x1, _x2),
-	index(_y).
-directionstep(w, _x1, _y, _x2, _y):-
-	succ(_x2, _x1),
-	index(_y).
-directionstep(ne, _x1, _y1, _x2, _y2):-
-	succ(_x1, _x2),
-	succ(_y1, _y2).
-directionstep(sw, _x1, _y1, _x2, _y2):-
-	succ(_x2, _x1),
-	succ(_y2, _y1).
-directionstep(se, _x1, _y1, _x2, _y2):-
-	succ(_x1, _x2),
-	succ(_y2, _y1).
-directionstep(nw, _x1, _y1, _x2, _y2):-
-	succ(_x2, _x1),
-	succ(_y1, _y2).
-distinctcell(_x1, _y1, _x2, _y2):-
-	cell(_x1, _y1),
-	cell(_x2, _y2),
-	distinct(_x1, _x2).
-distinctcell(_x1, _y1, _x2, _y2):-
-	cell(_x1, _y1),
-	cell(_x2, _y2),
-	distinct(_y1, _y2).
-cell(_x, _y):-
-	index(_x),
-	index(_y).
-direction(n).
-direction(ne).
-direction(e).
-direction(se).
-direction(s).
-direction(sw).
-direction(w).
-direction(nw).
-index(0).
-index(1).
-index(2).
-index(3).
-index(4).
-index(5).
-index(6).
-index(7).
-index(8).
-index(9).
-gt(_v1, 0):-
-	distinct(_v1, 0).
-gt(_v1, _v2):-
-	succ(_v1min, _v1),
-	succ(_v2min, _v2),
-	gt(_v1min, _v2min).
-equal(_x, _x).
-max(_x, _y, _x):-
-	gt(_x, _y).
-max(_x, _y, _y):-
-	gt(_y, _x).
-max(_x, _x, _x).
+	line(white).

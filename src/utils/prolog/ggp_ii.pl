@@ -22,6 +22,16 @@ sees_pl(State, JointAction, Role, Percepts):-
 %                                              GDL-II Methods                                                          %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+legal_jointaction_states(States, JAS):-
+    legal_jointaction_states(States, [], JAS).
+
+legal_jointaction_states([], JAS, JAS).
+legal_jointaction_states([StatesH|StatesT], TempJAS, JAS):-
+    setof(JA, legal_jointaction(StatesH, JA), StateJAS),
+    ord_union(TempJAS, StateJAS, NewTempJAS),
+    legal_jointaction_states(StatesT, NewTempJAS, JAS).
+
+
 % update_valid_states/5 updates the list of States given the role's Action and Percepts into a list of valid successor states.
 % it filters the resulting states on terminality:
 %       Terminal == true => StatesOut contains only terminal states
@@ -117,6 +127,10 @@ total_goal([StatesH|StatesT], Role, Temp, Goal):-
     NewTemp is Temp + NewGoal,
     total_goal(StatesT, Role, NewTemp, Goal).
 
+avg_goal(States, Role, AvgGoal):-
+    total_goal(States, Role, Goal),
+    length(States, L),
+    AvgGoal is div(Goal, L).
 
 %filter_states_percepts/4 filters all states from States that have percepts Percepts when jointactions JointActions are applied.
 %returns the indices of the valid states.
@@ -133,11 +147,9 @@ filter_states_percepts([StatesH|StatesT], [JointActionsH|JointActionsT], Role, P
         filter_states_percepts(StatesT, JointActionsT, Role, Percepts, NewInd, TempInds, Indices)
     ).
 
-avg_goal_from_history(ActionHist, PerceptHist, Role, Goal):-
+avg_goal_from_history(ActionHist, PerceptHist, Role, AvgGoal):-
     create_valid_states(ActionHist, PerceptHist, StatesOut, true),
-    total_goal(StatesOut, Role, GoalSum),
-    length(StatesOut, L),
-    Goal is div(GoalSum, L).
+    avg_goal(StatesOut, Role, AvgGoal).
 
 %simulate_multi/4 runs Rounds iterations of simulation on each of the provided states and returns a list of values
 %for each of the provided States.
