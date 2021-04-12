@@ -1,6 +1,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Krieg-Tictactoe
-;;; Sequential turn. Percepts = valid if no marker at cell, Invalid if marker at cell
+;;; Sequential turn.
+;;; Percepts = valid if no marker at cell, Invalid if marker at cell.
+;;; Stochastic Actions: marking cell = chance of marking adjacent cell
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Roles
@@ -34,37 +36,126 @@
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; LEGAL Relations
+;;; LEGAL
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(<= (legal ?p (mark ?m ?n))
+(<= (legal ?p (mark ?x ?y))
    (control ?p)
-   (loc ?c ?m ?n)
+   (loc ?c ?x ?y)
    (distinct ?c ?p))
 (<= (legal ?p noop)
    (not (control ?p)))
 
-(<= (validmove ?p ?m ?n)
-    (loc e ?m ?n)
-    (does ?p (mark ?m ?n)))
+(<= (validmove ?p ?x ?y)
+    (loc e ?x ?y)
+    (does ?p (mark ?x ?y)))
 
-(outcome ?role ?action (set (does ?role ?action)) (set 1))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; NEXT Relations
+;;; OUTCOMES
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(outcome ?role noop (set (does ?role noop)) (set 1))
+(<= (outcome ?role (mark ?x ?y)
+        (set
+            (does ?role (mark ?x ?y)))
+        (set 1))
+    (neighbours ?x ?y ?x1 ?y1 ?x2 ?y2 ?x3 ?y3 ?x4 ?y4)
+    (not (legal ?role (mark ?x1 ?y1)))
+    (not (legal ?role (mark ?x2 ?y2)))
+    (not (legal ?role (mark ?x3 ?y3)))
+    (not (legal ?role (mark ?x4 ?y4))))
+(<= (outcome ?role (mark ?x ?y)
+        (set
+            (does ?role (mark ?x ?y))
+            (does ?role (mark ?x1 ?y1)))
+        (set 0.9 0.1))
+    (neighbours ?x ?y ?x1 ?y1 ?x2 ?y2 ?x3 ?y3 ?x4 ?y4)
+    (legal ?role (mark ?x1 ?y1))
+    (not (legal ?role (mark ?x2 ?y2)))
+    (not (legal ?role (mark ?x3 ?y3)))
+    (not (legal ?role (mark ?x4 ?y4))))
+(<= (outcome ?role (mark ?x ?y)
+        (set
+            (does ?role (mark ?x ?y))
+            (does ?role (mark ?x1 ?y1))
+            (does ?role (mark ?x2 ?y2)))
+        (set 0.8 0.1 0.1))
+    (neighbours ?x ?y ?x1 ?y1 ?x2 ?y2 ?x3 ?y3 ?x4 ?y4)
+    (legal ?role (mark ?x1 ?y1))
+    (legal ?role (mark ?x2 ?y2))
+    (not (legal ?role (mark ?x3 ?y3)))
+    (not (legal ?role (mark ?x4 ?y4))))
+(<= (outcome ?role (mark ?x ?y)
+        (set
+            (does ?role (mark ?x ?y))
+            (does ?role (mark ?x1 ?y1))
+            (does ?role (mark ?x2 ?y2))
+            (does ?role (mark ?x3 ?y3)))
+        (set 0.7 0.1 0.1 0.1))
+    (neighbours ?x ?y ?x1 ?y1 ?x2 ?y2 ?x3 ?y3 ?x4 ?y4)
+    (legal ?role (mark ?x1 ?y1))
+    (legal ?role (mark ?x2 ?y2))
+    (legal ?role (mark ?x3 ?y3))
+    (not (legal ?role (mark ?x4 ?y4))))
+(<= (outcome ?role (mark ?x ?y)
+        (set
+            (does ?role (mark ?x ?y))
+            (does ?role (mark ?x1 ?y1))
+            (does ?role (mark ?x2 ?y2))
+            (does ?role (mark ?x3 ?y3))
+            (does ?role (mark ?x4 ?y4)))
+        (set 0.6 0.1 0.1 0.1 0.1))
+    (neighbours ?x ?y ?x1 ?y1 ?x2 ?y2 ?x3 ?y3 ?x4 ?y4)
+    (legal ?role (mark ?x1 ?y1))
+    (legal ?role (mark ?x2 ?y2))
+    (legal ?role (mark ?x3 ?y3))
+    (legal ?role (mark ?x4 ?y4)))
+
+(<= (adjacent ?i ?i1)
+    (or (-- ?i ?i1) (++ ?i ?i1)))
+
+(<= (adjacent ?x ?y ?x1 ?y)
+    (adjacent ?x ?x1))
+(<= (adjacent ?x ?y ?x ?y1)
+    (adjacent ?y ?y1))
+
+(<= (neighbours ?x ?y ?x1 ?y1 ?x2 ?y2 ?x3 ?y3 ?x4 ?y4)
+    (adjacent ?x ?y ?x1 ?y1)
+    (adjacent ?x ?y ?x2 ?y2)
+    (adjacent ?x ?y ?x3 ?y3)
+    (adjacent ?x ?y ?x4 ?y4)
+    (distinct_cells ?x ?y ?x1 ?y1 ?x2 ?y2 ?x3 ?y3 ?x4 ?y4))
+
+(<= (distinct_cells ?x ?y ?x1 ?y1 ?x2 ?y2 ?x3 ?y3 ?x4 ?y4)
+    (distinct_cell ?x ?y ?x1 ?y1)
+    (distinct_cell ?x ?y ?x2 ?y2)
+    (distinct_cell ?x ?y ?x3 ?y3)
+    (distinct_cell ?x ?y ?x4 ?y4)
+    (distinct_cell ?x1 ?y1 ?x2 ?y2)
+    (distinct_cell ?x1 ?y1 ?x3 ?y3)
+    (distinct_cell ?x1 ?y1 ?x4 ?y4)
+    (distinct_cell ?x2 ?y2 ?x3 ?y3)
+    (distinct_cell ?x2 ?y2 ?x4 ?y4)
+    (distinct_cell ?x3 ?y3 ?x4 ?y4))
+
+(<= (distinct_cell ?x ?y ?x1 ?y1)
+    (or (distinct ?x ?x1) (distinct ?y ?y1)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; NEXT
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(<= (next (loc ?p ?m ?n))
-    (validmove ?p ?m ?n))
-(<= (next (loc ?p ?m ?n))
-    (loc ?p ?m ?n)
+(<= (next (loc ?p ?x ?y))
+    (validmove ?p ?x ?y))
+(<= (next (loc ?p ?x ?y))
+    (loc ?p ?x ?y)
     (distinct ?p e))
-(<= (next (loc e ?m ?n))
-    (loc e ?m ?n)
-    (not (validmove ?p ?m ?n)))
+(<= (next (loc e ?x ?y))
+    (loc e ?x ?y)
+    (not (validmove ?p ?x ?y)))
 
-(<= (next (step ?n))
-   (step ?m)
-   (succ ?m ?n))
+(<= (next (step ?y))
+   (step ?x)
+   (succ ?x ?y))
 
 (<= (next (control white))
    (control black))
@@ -75,10 +166,10 @@
 ;;; SEES Relations
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (<= (sees ?p valid)
-    (validmove ?p ?m ?n))
+    (validmove ?p ?x ?y))
 (<= (sees ?p invalid)
-   (does ?p (mark ?m ?n))
-   (not (validmove ?p ?m ?n)))
+   (does ?p (mark ?x ?y))
+   (not (validmove ?p ?x ?y)))
 
 (<= (sees ?p nothing)
    (does ?p noop))
@@ -95,14 +186,14 @@
 
 
 (<= (line ?c)
-   (loc ?c ?m 0)
-   (loc ?c ?m 1)
-   (loc ?c ?m 2))
+   (loc ?c ?x 0)
+   (loc ?c ?x 1)
+   (loc ?c ?x 2))
 
 (<= (line ?c)
-   (loc ?c 0 ?n)
-   (loc ?c 1 ?n)
-   (loc ?c 2 ?n))
+   (loc ?c 0 ?y)
+   (loc ?c 1 ?y)
+   (loc ?c 2 ?y))
 
 (<= (line ?c)
    (loc ?c 0 0)
@@ -114,10 +205,10 @@
    (loc ?c 2 0))
 
 (<= open
-   (loc e ?m1 ?n1))
+   (loc e ?x ?y))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; GOAL Relations
+;;; GOAL
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (<= (goal white 100)
    (line white))
@@ -134,3 +225,18 @@
    (not (line black)))
 (<= (goal black 0)
    (line white))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; SUPPORT
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(equal ?x ?x)
+
+(++ -1 0)
+(++ 0 1)
+(++ 1 2)
+(++ 2 3)
+
+(-- 3 2)
+(-- 2 1)
+(-- 1 0)
+(-- 0 -1)

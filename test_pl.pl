@@ -313,47 +313,102 @@ role(black).
 base(loc(_v, _x, _y)).
 base(control(_p)).
 base(step(_s)).
-init(loc(b, 0, 0)).
-init(loc(b, 0, 1)).
-init(loc(b, 0, 2)).
-init(loc(b, 1, 0)).
-init(loc(b, 1, 1)).
-init(loc(b, 1, 2)).
-init(loc(b, 2, 0)).
-init(loc(b, 2, 1)).
-init(loc(b, 2, 2)).
+init(loc(e, 0, 0)).
+init(loc(e, 0, 1)).
+init(loc(e, 0, 2)).
+init(loc(e, 1, 0)).
+init(loc(e, 1, 1)).
+init(loc(e, 1, 2)).
+init(loc(e, 2, 0)).
+init(loc(e, 2, 1)).
+init(loc(e, 2, 2)).
 init(step(1)).
 init(control(white)).
-legal(_p, mark(_m, _n)):-
+legal(_p, mark(_x, _y)):-
 	control(_p),
-	loc(_c, _m, _n),
+	loc(_c, _x, _y),
 	distinct(_c, _p).
 legal(_p, noop):-
 	\+control(_p).
-validmove(_p, _m, _n):-
-	does(_p, mark(_m, _n)),
-	loc(_b, _m, _n).
-outcome(_role, _action, [does(_role, _action)], [1]).
-next(loc(_p, _m, _n)):-
-	validmove(_p, _m, _n).
-next(loc(_p, _m, _n)):-
-	loc(_p, _m, _n),
-	distinct(_p, b).
-next(loc(b, _m, _n)):-
-	loc(b, _m, _n),
-	\+validmove(_p, _m, _n).
-next(step(_n)):-
-	step(_m),
-	succ(_m, _n).
+validmove(_p, _x, _y):-
+	loc(e, _x, _y),
+	does(_p, mark(_x, _y)).
+outcome(_role, noop, [does(_role, noop)], [1]).
+outcome(_role, mark(_x, _y), [does(_role, mark(_x, _y))], [1]):-
+	neighbours(_x, _y, _x1, _y1, _x2, _y2, _x3, _y3, _x4, _y4),
+	\+legal(_role, mark(_x1, _y1)),
+	\+legal(_role, mark(_x2, _y2)),
+	\+legal(_role, mark(_x3, _y3)),
+	\+legal(_role, mark(_x4, _y4)).
+outcome(_role, mark(_x, _y), [does(_role, mark(_x, _y)), does(_role, mark(_x1, _y1))], [0.9, 0.1]):-
+	neighbours(_x, _y, _x1, _y1, _x2, _y2, _x3, _y3, _x4, _y4),
+	legal(_role, mark(_x1, _y1)),
+	\+legal(_role, mark(_x2, _y2)),
+	\+legal(_role, mark(_x3, _y3)),
+	\+legal(_role, mark(_x4, _y4)).
+outcome(_role, mark(_x, _y), [does(_role, mark(_x, _y)), does(_role, mark(_x1, _y1)), does(_role, mark(_x2, _y2))], [0.8, 0.1, 0.1]):-
+	neighbours(_x, _y, _x1, _y1, _x2, _y2, _x3, _y3, _x4, _y4),
+	legal(_role, mark(_x1, _y1)),
+	legal(_role, mark(_x2, _y2)),
+	\+legal(_role, mark(_x3, _y3)),
+	\+legal(_role, mark(_x4, _y4)).
+outcome(_role, mark(_x, _y), [does(_role, mark(_x, _y)), does(_role, mark(_x1, _y1)), does(_role, mark(_x2, _y2)), does(_role, mark(_x3, _y3))], [0.7, 0.1, 0.1, 0.1]):-
+	neighbours(_x, _y, _x1, _y1, _x2, _y2, _x3, _y3, _x4, _y4),
+	legal(_role, mark(_x1, _y1)),
+	legal(_role, mark(_x2, _y2)),
+	legal(_role, mark(_x3, _y3)),
+	\+legal(_role, mark(_x4, _y4)).
+outcome(_role, mark(_x, _y), [does(_role, mark(_x, _y)), does(_role, mark(_x1, _y1)), does(_role, mark(_x2, _y2)), does(_role, mark(_x3, _y3)), does(_role, mark(_x4, _y4))], [0.6, 0.1, 0.1, 0.1, 0.1]):-
+	neighbours(_x, _y, _x1, _y1, _x2, _y2, _x3, _y3, _x4, _y4),
+	legal(_role, mark(_x1, _y1)),
+	legal(_role, mark(_x2, _y2)),
+	legal(_role, mark(_x3, _y3)),
+	legal(_role, mark(_x4, _y4)).
+adjacent(_i, _i1):-
+	(--(_i, _i1);++(_i, _i1)).
+adjacent(_x, _y, _x1, _y):-
+	adjacent(_x, _x1).
+adjacent(_x, _y, _x, _y1):-
+	adjacent(_y, _y1).
+neighbours(_x, _y, _x1, _y1, _x2, _y2, _x3, _y3, _x4, _y4):-
+	adjacent(_x, _y, _x1, _y1),
+	adjacent(_x, _y, _x2, _y2),
+	adjacent(_x, _y, _x3, _y3),
+	adjacent(_x, _y, _x4, _y4),
+	distinct_cells(_x, _y, _x1, _y1, _x2, _y2, _x3, _y3, _x4, _y4).
+distinct_cells(_x, _y, _x1, _y1, _x2, _y2, _x3, _y3, _x4, _y4):-
+	distinct_cell(_x, _y, _x1, _y1),
+	distinct_cell(_x, _y, _x2, _y2),
+	distinct_cell(_x, _y, _x3, _y3),
+	distinct_cell(_x, _y, _x4, _y4),
+	distinct_cell(_x1, _y1, _x2, _y2),
+	distinct_cell(_x1, _y1, _x3, _y3),
+	distinct_cell(_x1, _y1, _x4, _y4),
+	distinct_cell(_x2, _y2, _x3, _y3),
+	distinct_cell(_x2, _y2, _x4, _y4),
+	distinct_cell(_x3, _y3, _x4, _y4).
+distinct_cell(_x, _y, _x1, _y1):-
+	(distinct(_x, _x1);distinct(_y, _y1)).
+next(loc(_p, _x, _y)):-
+	validmove(_p, _x, _y).
+next(loc(_p, _x, _y)):-
+	loc(_p, _x, _y),
+	distinct(_p, e).
+next(loc(e, _x, _y)):-
+	loc(e, _x, _y),
+	\+validmove(_p, _x, _y).
+next(step(_y)):-
+	step(_x),
+	succ(_x, _y).
 next(control(white)):-
 	control(black).
 next(control(black)):-
 	control(white).
 sees(_p, valid):-
-	validmove(_p, _m, _n).
+	validmove(_p, _x, _y).
 sees(_p, invalid):-
-	does(_p, mark(_m, _n)),
-	\+validmove(_p, _m, _n).
+	does(_p, mark(_x, _y)),
+	\+validmove(_p, _x, _y).
 sees(_p, nothing):-
 	does(_p, noop).
 terminal:-
@@ -363,13 +418,13 @@ terminal:-
 terminal:-
 	\+open.
 line(_c):-
-	loc(_c, _m, 0),
-	loc(_c, _m, 1),
-	loc(_c, _m, 2).
+	loc(_c, _x, 0),
+	loc(_c, _x, 1),
+	loc(_c, _x, 2).
 line(_c):-
-	loc(_c, 0, _n),
-	loc(_c, 1, _n),
-	loc(_c, 2, _n).
+	loc(_c, 0, _y),
+	loc(_c, 1, _y),
+	loc(_c, 2, _y).
 line(_c):-
 	loc(_c, 0, 0),
 	loc(_c, 1, 1),
@@ -379,7 +434,7 @@ line(_c):-
 	loc(_c, 1, 1),
 	loc(_c, 2, 0).
 open:-
-	loc(b, _m1, _n1).
+	loc(e, _x, _y).
 goal(white, 100):-
 	line(white).
 goal(white, 50):-
@@ -394,3 +449,12 @@ goal(black, 50):-
 	\+line(black).
 goal(black, 0):-
 	line(white).
+equal(_x, _x).
+++(-1, 0).
+++(0, 1).
+++(1, 2).
+++(2, 3).
+--(3, 2).
+--(2, 1).
+--(1, 0).
+--(0, -1).
