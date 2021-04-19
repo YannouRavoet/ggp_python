@@ -14,7 +14,7 @@ has_stochastic_actions :-
 sees_pl(State, JointAction, Role, Percepts):-
     maplist(assertz, State),
     maplist(assertz, JointAction),
-    setof(sees(Role,P), sees(Role,P), Percepts),
+    (setof(sees(Role,P), sees(Role,P), Percepts) *-> true; Percepts=  []),
     maplist(retract, State),
     maplist(retract, JointAction),!.
 
@@ -73,7 +73,13 @@ filter_jointactions_ii(State, Percepts, Role, [LJAH|LJAT], Temp, JointActions):-
 % legal_jointaction_complete/2 builds a JointAction that completes the Action.
 legal_jointaction_complete(State, does(Role,Action), JointAction):-
     setof(R, (role(R), R\=Role), OtherRoles),
-    legal_jointaction_iter(State, OtherRoles, [does(Role,Action)], JointAction).
+    legal_jointaction_random_iter(State, OtherRoles, [does(Role,Action)], JointAction).
+
+legal_jointaction_random_iter(_, [], JointAction, JointAction).
+legal_jointaction_random_iter(State, [RoleH|RoleT], Temp, JointAction) :-
+    legals_pl(State, RoleH, Actions),
+    random_member(Action, Actions),
+    legal_jointaction_random_iter(State, RoleT, [Action|Temp], JointAction).
 
 % build_states/4 builds all StatesOut that result from applying JointActions to StateIn.
 % StatesOut can contain duplicate states.

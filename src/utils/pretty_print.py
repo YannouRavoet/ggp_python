@@ -8,10 +8,10 @@ class Grid:
         def __init__(self, x, y, value):
             self.x = x  # col
             self.y = y  # row
-            self.value = value if value is not None else '.'
+            self.value = value
 
         def print(self):
-            print(f' {self.value} ', end='')
+            print(f" {self.value if self.value is not None else '.'} ", end='')
 
         def __repr__(self):
             return str(f'{self.x}, {self.y}: {self.value}')
@@ -22,7 +22,7 @@ class Grid:
         def __hash__(self):
             return hash(str(self.x) + str(self.y))
 
-    def __init__(self, range_x, range_y, row_div_mod=1, col_div_mod=1):
+    def __init__(self, range_x, range_y):
         """ Builds a grid with the following index structure
                  range_x = range_y = 4
                    +---+---+---+---+
@@ -106,6 +106,7 @@ class Board2DPrinter(PrettyPrinter):
         [print(fact) for fact in non_cell_facts]
 
     def parse_cell_term(self, val, x, y):
+        val = val if val != self.empty_val.upper() else None
         self.grid.set_cell_value(val, x, y)
 
 

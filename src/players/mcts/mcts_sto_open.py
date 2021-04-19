@@ -176,7 +176,7 @@ class OpenMCTSPlayerSTO(GamePlayerSTO):
             best_children = node.children_maxUCB1(self.expl_bias, self.legal_sjas)
             node = random.choice(best_children)
             self.update_state(node.parent_stochastic_jointaction)
-            node.update_edges(self.legal_sjas)
+            node.update_children(self.legal_sjas)
         return node
 
     # PHASE 2: Expand the given node

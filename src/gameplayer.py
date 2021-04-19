@@ -22,7 +22,7 @@ class GamePlayerBase(HTTPServer, ABC):
         self.role = None
 
         self.msg_time = None  # time at which last message was received
-        self.reply_buffer = 1  # nb seconds between ClockOverException and deadline of response
+        self.reply_buffer = 2  # nb seconds between ClockOverException and deadline of response
         self.reply_deadline = None  # time at which the manager needs an answer
 
         self.firstRound = True
@@ -39,10 +39,10 @@ class GamePlayerBase(HTTPServer, ABC):
             return self.handle_message_start(msg.args)
         elif msg.type in [MessageType.PLAY, MessageType.PLAY_II, MessageType.PLAY_STO, MessageType.PLAY_STO_II]:
             self.set_reply_deadline(self.matchInfo.playclock)
-            ready_msg = self.handle_message_play(msg.args)
+            action_msg = self.handle_message_play(msg.args)
             if self.firstRound:
                 self.firstRound = False
-            return ready_msg
+            return action_msg
         elif msg.type in [MessageType.STOP, MessageType.STOP_II, MessageType.STOP_STO, MessageType.STOP_STO_II]:
             self.set_reply_deadline(self.matchInfo.playclock)
             self.terminal = True

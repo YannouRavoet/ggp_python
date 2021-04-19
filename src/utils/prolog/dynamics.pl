@@ -16,4 +16,5 @@
            turn/1, step/1, location/3, inPool/2, occupied/3,%stratego
            control/1, location/3, moved/2, %amazons
            die/3, control/1, step/1, throwndie/2, %dicegame
-           loc/3, step/1, control/1. %kttt_sto
+           loc/3, step/1, control/1, %kttt_sto
+           asked/0, exploded/0, step/1, armed/1. %explodingbomb

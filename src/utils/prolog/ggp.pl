@@ -33,7 +33,7 @@ legal_pl(State, Role, Action):-
     member(Action, Actions).
 legals_pl(State, Role, LegalActions):-
     maplist(assertz, State),
-    setof(does(Role,A), legal(Role,A), LegalActions),
+    (setof(does(Role,A), legal(Role,A), LegalActions) *-> true; LegalActions=[]),   %if no legal actions, return empty list instead of failing
     maplist(retract, State),!.
 terminal_pl(State):-
     maplist(assertz,State),
@@ -81,6 +81,7 @@ legal_jointaction_iter(State, [RoleH|RoleT], Temp, JointAction) :-
     legal_pl(State, RoleH, Action),
     legal_jointaction_iter(State, RoleT, [Action|Temp], JointAction).
 
+
 % legal_jointaction_random/1 is used to generate a random JointAction.
 % Usefull for simulations. Assumes the State is already asserted.
 legal_jointaction_random(JointAction):-
@@ -93,7 +94,8 @@ legal_jointaction_random_iter([RoleH|RoleT], Temp, JointAction) :-
     random_member(Action, Actions),
     legal_jointaction_random_iter(RoleT, [Action|Temp], JointAction).
 
-
+legal_jointactions(State, JointActions):-
+    setof(JA, legal_jointaction(State, JA), JointActions).
 % simulate/3 simulates a random playthrough from the current state
 % until a terminal state is reached. It then finds the goal value
 % for the given role in that terminal state.

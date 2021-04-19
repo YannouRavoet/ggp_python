@@ -2,7 +2,6 @@ import os
 import random
 import socket
 import string
-import time
 from threading import Thread
 from http.server import HTTPServer
 from http.client import HTTPConnection
@@ -59,8 +58,10 @@ class Match(object):
         self.printer.print_state(self.state)
 
     def advance_state(self):
-        jointaction = self.get_jointaction() if not self.matchInfo.settings.has_stochastic_actions \
-            else self.get_outcomes()
+        if not self.matchInfo.settings.has_stochastic_actions:
+            jointaction = self.get_jointaction()
+        else:
+            jointaction = self.get_outcomes()
         self.state = self.simulator.next_state(self.state, jointaction)
         self.round += 1
         self.printer.print_state(self.state)
@@ -86,8 +87,12 @@ class Match(object):
 
     def set_percepts(self):
         """Sets the percepts for all players"""
-        for pl in self.players:
-            pl.percepts = self.simulator.get_percepts(self.state, self.get_jointaction(), pl.role)
+        if self.matchInfo.settings.has_stochastic_actions:
+            for pl in self.players:
+                pl.percepts = self.simulator.get_percepts(self.state, self.get_outcomes(), pl.role)
+        else:
+            for pl in self.players:
+                pl.percepts = self.simulator.get_percepts(self.state, self.get_jointaction(), pl.role)
 
     def set_outcomes(self):
         """Turns stochastic player actions choices into a deterministic action."""
@@ -99,6 +104,8 @@ class Match(object):
         for pl in self.players:
             if pl.outcome is not None:  # empty for first round
                 outcomes.append(pl.outcome)
+        if self.matchInfo.settings.has_random:
+            outcomes.append(self.random.action)
         return JointAction(outcomes)
 
     def save_results(self):
@@ -249,5 +256,5 @@ class GameManager(HTTPServer):
         for r in range(0, rounds):
             matchInfo = self.run_match(matchID)
             results[matchInfo.get_winner()] += 1
+            print(results)
         results['ties'] = rounds - sum(list(results.values()))
-        print(results)

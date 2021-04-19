@@ -24,6 +24,8 @@ class MatchInfo(object):
     def get_winner(self):
         "Returns the winning role of the match as a string. If the match was a tie, returns 'tie'."
         def match_tie():
+            if len(self.results) == 1:
+                return False # no ties for singleplayer games
             match_value = list(self.results.values())[0]
             for result in list(self.results.values()):
                 if result != match_value:

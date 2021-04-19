@@ -14,3 +14,9 @@ class State:
 
     def __repr__(self):
         return self.to_term()
+
+    def __eq__(self, other):
+        return set(self.facts) == set(other.facts)
+
+    def __hash__(self):
+        return hash(frozenset(self.facts))

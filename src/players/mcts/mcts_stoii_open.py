@@ -4,72 +4,50 @@ from typing import Dict, List
 import stopit
 from math import sqrt, log
 from gameplayer import GamePlayerSTOII
+from utils.ggp.action import Action
 from utils.ggp.jointaction import JointAction
 from utils.ggp.state import State
 
 
 class OpenMCTSNodeSTOII:
-    """OpenMCTSNodeSTOII represents a node in a open-loop MCTS built game-tree used in imperfect information games.
-    An OpenMCTSNodeSTOII node does not store the state of the game, since it represents the set of states reached by
-    the stochastic actions taken starting from one of the root-states."""
-
-    def __init__(self, parent, parent_stochastic_jointaction):
+    def __init__(self, parent, parent_action):
         self.parent: OpenMCTSNodeSTOII = parent
-        self.parent_stochastic_jointaction: JointAction = parent_stochastic_jointaction
+        self.parent_action: Action = parent_action
         self.children: Dict[JointAction, OpenMCTSNodeSTOII] = dict()
 
         # --- STATS --- #
-        self.nb_visit: int = 1  # nb of times the node was visited
-        self.total_goal: float = 1  # sum of goal values the node has resulted in
+        self.nb_visit: int = 0  # nb of times the node was visited
+        self.total_goal: float = 0  # sum of goal values the node has resulted in
 
-    @classmethod
-    def fromNodes(cls, nodes):
-        combined_node = OpenMCTSNodeSTOII(parent=None, parent_stochastic_jointaction=None)
-        for node in nodes:
-            combined_node.nb_visit += node.nb_visit
-            combined_node.total_goal += node.total_goal
-        return combined_node
+    def get_child(self, action):
+        return self.children[action]
 
-    def get_child(self, stochastic_jointaction):
-        return self.children[stochastic_jointaction]
+    def add_child(self, action):
+        self.children[action] = OpenMCTSNodeSTOII(parent=self, parent_action=action)
+        return self.children[action]
 
-    def add_child(self, stochastic_jointaction):
-        self.children[stochastic_jointaction] = OpenMCTSNodeSTOII(parent=self,
-                                                                  parent_stochastic_jointaction=stochastic_jointaction)
+    def update_edges(self, actions):
+        for a in actions:
+            if a not in self.children:
+                self.children[a] = None
 
-    def get_children(self, role, stochastic_action):
-        return list(filter(lambda node: node is not None
-                                        and node.parent_stochastic_jointaction.get_action(role) == stochastic_action,
-                           self.children.values()))
+    def filter_children(self, actions):
+        self.update_edges(actions)
+        actions_to_delete = list()
+        for a in self.children:
+            if a not in actions:
+                actions_to_delete.append(a)
+        for a in actions_to_delete:
+            del self.children[a]
 
-    """ Adds the sja as edges to the node if they were not present yet. """
-    def update_edges(self, stochastic_jointactions):
-        for sja in stochastic_jointactions:
-            if sja not in self.children:
-                self.children[sja] = None
-
-    def filter_children(self, stochastic_jointactions):
-        """ Useful when the root node is updated and we want to remove all sja's that were only valid in other
-        states. """
-        self.update_edges(stochastic_jointactions)
-        sjas_to_delete = list()
-        for sja in self.children:
-            if sja not in stochastic_jointactions:
-                sjas_to_delete.append(sja)
-        for sja in sjas_to_delete:
-            del self.children[sja]
-
-    def unexplored_stochastic_jointactions(self, legal_sjas):
-        """Returns a list of all unexplored stochastic jointactions"""
-        return list(filter(lambda sja: sja in legal_sjas
-                                       and self.children[sja] is None, self.children))
+    def unexplored_edges(self, legal_actions):
+        return list(filter(lambda a: a in legal_actions and self.children[a] is None, self.children))
 
     def explored_children(self):
         return list(filter(lambda node: node is not None, self.children.values()))
 
-    def explored_children_from_set(self, legal_sjas):
-        return list(filter(lambda node: node.parent_stochastic_jointaction in legal_sjas
-                                        and node is not None, self.children.values()))
+    def explored_children_from_set(self, legal_actions):
+        return list(filter(lambda node: node is not None and node.parent_action in legal_actions, self.children.values()))
 
     def has_unexplored_children(self):
         for child in self.children.values():
@@ -84,12 +62,13 @@ class OpenMCTSNodeSTOII:
             return 0
 
     def AVG(self):
-        return self.total_goal / self.nb_visit \
-            if self.nb_visit != 0 \
-            else 0
+        if self.nb_visit != 0:
+            return self.total_goal / self.nb_visit
+        else:
+            return 0
 
-    def children_maxUCB1(self, bias, legal_sjas):
-        explored_children = self.explored_children_from_set(legal_sjas)
+    def children_maxUCB1(self, bias, legal_actions):
+        explored_children = self.explored_children_from_set(legal_actions)
         if len(explored_children) > 0:
             maxvalue = max([c.UCB1(bias) for c in explored_children])
             return [c for c in explored_children if c.UCB1(bias) == maxvalue]
@@ -103,7 +82,31 @@ class OpenMCTSNodeSTOII:
         return list()
 
     def __repr__(self):
-        return str(f"AVG:{self.AVG():.2f}\t UCB1:{self.UCB1(math.sqrt(2))}")
+        return str(f"AVG:{self.AVG():.2f}\t UCB1:{self.UCB1(math.sqrt(2)):.2f}")
+
+
+def OpenMCTSSTOIINode_fromNodes(nodes: List[OpenMCTSNodeSTOII]):
+    combined_node = OpenMCTSNodeSTOII(parent=None, parent_action=None)
+    for node in nodes:
+        combined_node.parent_stochastic_action = node.parent_action
+        combined_node.children = merge_children(combined_node.children, node.children)
+        combined_node.nb_visit += node.nb_visit
+        combined_node.total_goal += node.total_goal
+    return combined_node
+
+
+def merge_children(children, new_children):
+    for key in new_children:
+        if key not in children:
+            children[key] = new_children[key]
+        else:
+            nodes = list()
+            if children[key] is not None:
+                nodes.append(children[key])
+            if new_children[key] is not None:
+                nodes.append(new_children[key])
+            children[key] = OpenMCTSSTOIINode_fromNodes(nodes)
+    return children
 
 
 class OpenMCTSPlayerSTOII(GamePlayerSTOII):
@@ -112,29 +115,40 @@ class OpenMCTSPlayerSTOII(GamePlayerSTOII):
         self.root_node: OpenMCTSNodeSTOII = None  # root node of the game tree
         self.root_states: List[State] = list()  # possible root states of the game tree
         self.state: State = None  # current state in the tree traversal
-        self.legal_sjas: List[JointAction] = None  # list of legal sjas in self.state (empty if terminal)
+        self.legal_actions: List[Action] = None  # list of legal sas in self.state (empty if terminal)
 
         self.action_hist = list()
         self.outcome_hist = list()
         self.percept_hist = list()
 
+        self.firstRound = True
+        self.terminal = False
+
         self.expl_bias: float = expl_bias  # exploration bias to use with UCB1
         self.rounds_per_loop: int = 50  # simulation rounds per expansion
+
+    def init_gametree(self):
+        self.root_node: OpenMCTSNodeSTOII = None  # root node of the game tree
+        self.root_states: List[State] = list()  # possible root states of the game tree
+        self.state: State = None  # current state in the tree traversal
+        self.legal_actions: List[Action] = None  # list of legal sas in self.state (empty if terminal)
+
+        self.action_hist = list()
+        self.outcome_hist = list()
+        self.percept_hist = list()
 
         self.firstRound = True
         self.terminal = False
 
-    def make_node(self, parent, stochastic_jointaction):
-        """ Generates an MCTS node with parent *parent* resulting from taking jointaction *jointaction* (which results
-        in state *state*). """
-        return OpenMCTSNodeSTOII(parent=parent, parent_stochastic_jointaction=stochastic_jointaction)
+    def make_node(self, parent, action):
+        return OpenMCTSNodeSTOII(parent=parent, parent_action=action)
 
     @stopit.threading_timeoutable()
     def player_start(self):
-        self.root_node = self.make_node(parent=None, stochastic_jointaction=None)
+        self.root_node = self.make_node(parent=None, action=None)
         self.root_states.append(self.simulator.initial_state())
-        sjas = self.simulator.legal_sjas_from_states(self.root_states)
-        self.root_node.update_edges(sjas)
+        legal_actions = self.simulator.legal_actions_from_states(self.root_states, self.role)
+        self.root_node.update_edges(legal_actions)
 
     @stopit.threading_timeoutable()
     def player_play(self, *args, **kwargs):
@@ -143,35 +157,35 @@ class OpenMCTSPlayerSTOII(GamePlayerSTOII):
             self.outcome_hist.append(args[1])
             self.percept_hist.append(args[2])
             self.update_root()
-
+        rounds = 0
         while True:
             try:
                 self.pick_random_root()
                 node = self.select(self.root_node)
                 node = self.expand(node)
-                goal_value = self.simulate(node, rounds=self.rounds_per_loop)
+                goal_value = self.simulate(rounds=self.rounds_per_loop)
                 self.backprop(node, goal_value, visits=self.rounds_per_loop)
+                rounds += self.rounds_per_loop
             except stopit.TimeoutException:
-                self.pick_random_root()
+                print(f"Ran {rounds} rounds this cycle distributed over {len(self.root_states)} root states")
                 return self.action_choice()
 
-    """Filters out invalid nodes (from percepts) and updates state."""
-
     def update_root(self):
-        root_nodes = self.root_node.get_children(self.role, self.action_hist[-1])
-        self.root_node = OpenMCTSNodeSTOII.fromNodes(root_nodes)
-
+        self.root_node = self.root_node.get_child(self.action_hist[-1])
+        if self.root_node is None:
+            self.root_node = self.make_node(None, None)
         self.root_states = self.simulator.update_states_stoii(self.root_states,
                                                               self.action_hist[-1],
                                                               self.outcome_hist[-1],
                                                               self.percept_hist[-1],
                                                               self.terminal)
-        sjas = self.simulator.legal_sjas_from_states(self.root_states)
-        self.root_node.filter_children(sjas)
+        print(f"{self.role} currently has {len(self.root_states)} root states")
+        legal_actions = self.simulator.legal_actions_from_states(self.root_states, self.role)
+        self.root_node.filter_children(legal_actions)
 
     def pick_random_root(self):
         self.state = random.choice(self.root_states)
-        self.legal_sjas = self.simulator.legal_jointactions(self.state)
+        self.legal_actions = self.simulator.legal_actions(self.state, self.role)
 
     @stopit.threading_timeoutable()
     def player_stop(self, *args, **kwargs):
@@ -179,50 +193,47 @@ class OpenMCTSPlayerSTOII(GamePlayerSTOII):
         self.outcome_hist.append(args[1])
         self.percept_hist.append(args[2])
         self.update_root()
-        return self.simulator.avg_goal(self.role, self.root_states)
+        avg_goal = self.simulator.avg_goal(self.role, self.root_states)
+        self.init_gametree()
+        return avg_goal
 
     def action_choice(self):
         best_children = self.root_node.children_maxAVG()
-        return random.choice(best_children).parent_stochastic_jointaction.get_action(self.role)
+        return random.choice(best_children).parent_action
+
 
     # ---------------------------------------------------------------------------------------------------------------- #
     # ------------------------------------------------    PHASES    -------------------------------------------------- #
     # ---------------------------------------------------------------------------------------------------------------- #
-    # PHASE 1: Select best node to expand with UCB1 starting from a given node
     def select(self, node):
         while not node.has_unexplored_children() and not self.simulator.is_terminal(self.state):
-            best_children = node.children_maxUCB1(self.expl_bias, self.legal_sjas)
-            node = random.choice(best_children)
-            self.update_state(node.parent_stochastic_jointaction)
-            node.update_edges(self.legal_sjas)
-        return node
+            node = random.choice(node.children_maxUCB1(self.expl_bias, self.legal_actions))
+            self.update_state(node.parent_action)
+            node.update_edges(self.legal_actions)
+        return node  # node with unexplored edges or terminal node
 
-    # PHASE 2: Expand the given node
     def expand(self, node):
-        """Generates all MCTSNodeSTO children of the first unexplored ChanceNode child of the given node.
-        Returns one of the resulting MCTSNodeSTO children weighted by their probability."""
-
-        unexplored_sjas = node.unexplored_stochastic_jointactions(self.legal_sjas)
-        if len(unexplored_sjas) > 0:
-            stochastic_jointaction = unexplored_sjas[0]
-            child_node = self.make_node(node, stochastic_jointaction)
-            node.children[stochastic_jointaction] = child_node
-            self.update_state(stochastic_jointaction)
-            return child_node
+        unexplored_actions = node.unexplored_edges(self.legal_actions)
+        if len(unexplored_actions) > 0:
+            action = unexplored_actions[0]  # pick an action
+            node = node.add_child(action)
+            self.update_state(action)
+            return node
         return node  # terminal node
 
-    def update_state(self, stochastic_jointaction):
-        dja: JointAction = self.simulator.sample_jointaction_outcome(self.state, stochastic_jointaction)
-        self.state = self.simulator.next_state(self.state, dja)
-        self.legal_sjas = self.simulator.legal_jointactions(self.state)
-
-    # PHASE 3: Simulate a random game from the given node on
-    def simulate(self, _, rounds=1):
+    def simulate(self, rounds):
         return self.simulator.simulate_sto(self.state, self.role, rounds)
 
-    # PHASE 4: Backpropagate the terminal value through the ancestor nodes
-    def backprop(self, node, value, visits=1):
+    def backprop(self, node, value, visits):
         if node is not None:
             node.nb_visit += visits
             node.total_goal += value
             self.backprop(node.parent, value, visits)
+
+    def update_state(self, action):
+        stochastic_jointaction = self.simulator.complete_jointaction(self.state, action) #add random actions for other players
+        deterministic_jointaction = self.simulator.sample_jointaction_outcome(self.state, stochastic_jointaction) #sample outcomes
+        self.state = self.simulator.next_state(self.state, deterministic_jointaction)
+        self.legal_actions = self.simulator.legal_actions(self.state, self.role)
+
+

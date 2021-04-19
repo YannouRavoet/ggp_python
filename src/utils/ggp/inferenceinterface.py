@@ -305,21 +305,19 @@ class InferenceInterface(I_InferenceInterface):
 
     def get_roles(self):
         results = self.engine.query(query='roles_pl(R)')
-        return PrologEngine.results2list(results[0]['R'])
+        return [role for role in results[0]['R']]
 
     def get_player_roles(self):
         return list(filter(lambda r: r != 'random', self.roles))
 
     def initial_state(self):
         results = self.engine.query(query='init_pl(State)')
-        facts = PrologEngine.results2list(results[0]['State'])
-        return State(facts)
+        return State(results[0]['State'])
 
     def legal_actions(self, state, role):
         if not self.is_terminal(state):
             results = self.engine.query(f'legals_pl({state.to_term()}, {role}, Actions)')
-            actions = PrologEngine.results2list(results[0]['Actions'])
-            return [Action.from_string(action) for action in actions]
+            return [Action.from_string(action) for action in results[0]['Actions']]
         return []  # legality of action does not depend on terminality of state in most GDL desriptions
 
     def actionlist2jointaction(self, actions):
@@ -330,9 +328,9 @@ class InferenceInterface(I_InferenceInterface):
 
     def legal_jointactions(self, state):
         if not self.is_terminal(state):
-            results = self.engine.query(query=f"legal_jointaction({state.to_term()}, JA)")
-            return [JointAction([Action.from_string(action) for action in PrologEngine.results2list(result['JA'])])
-                    for result in results]
+            results = self.engine.query(query=f"legal_jointactions({state.to_term()}, JointActions)")
+            return [JointAction([Action.from_string(action) for action in jointaction])
+                    for jointaction in results[0]['JointActions']]
         return []
 
     def is_terminal(self, state):
@@ -343,10 +341,8 @@ class InferenceInterface(I_InferenceInterface):
         return self._goalnorm[role](results[0]['Value']) if norm else results[0]['Value']
 
     def next_state(self, state, jointaction):
-        assert (len(jointaction) == len(self.roles))
         results = self.engine.query(f"next_pl({state.to_term()}, {jointaction.to_term()}, NextState)")
-        facts = PrologEngine.results2list(results[0]['NextState'])
-        return State(facts)
+        return State(results[0]['NextState'])
 
     def simulate(self, state: State, role: str, rounds: int, norm: bool = True):
         results = self.engine.query(f"simulate({state.to_term()}, {role}, Value, {rounds})")
@@ -471,10 +467,23 @@ class InferenceInterface(I_InferenceInterface):
                                                     GDL-STO-II
     """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
+    def complete_jointaction(self, state: State, action: Action) -> JointAction:
+        results = self.engine.query(f"legal_jointaction_complete({state.to_term()}, {action.to_term()}, JointAction)")
+        return JointAction([Action.from_string(action) for action in results[0]['JointAction']])
+
+    def legal_actions_from_states(self, states: List[State], role: str):
+        results = self.engine.query(f"legal_actions_states("
+                                    f"[{','.join([state.to_term() for state in states])}],"
+                                    f"{role},"
+                                    f"LegalActions)")
+        return [Action.from_string(action) for action in results[0]['LegalActions']]
+
     def legal_sjas_from_states(self, states: List[State]):
-        results = self.engine.query(query=f"legal_jointaction_states("
-                                          f"[{','.join([state.to_term() for state in states])}],"
-                                          f"JointActions)")
+        results = self.engine.query(f"legal_jointaction_states("
+                                    f"[{','.join([state.to_term() for state in states])}],"
+                                    f"JointActions)")
+        if len(results) == 0:
+            return []
         return [JointAction([Action.from_string(action)
                              for action in jointaction])
                 for jointaction in results[0]['JointActions']]
@@ -488,6 +497,5 @@ class InferenceInterface(I_InferenceInterface):
                                     f"{percepts.to_term()},"
                                     f"{'true' if terminal else 'false'},"
                                     f"NewStates)")
-        if len(results) == 0:
-            print('empty results')
-        return [State(facts) for facts in results[0]['NewStates']]
+        new_states = [State(facts) for facts in results[0]['NewStates']]
+        return new_states

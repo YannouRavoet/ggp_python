@@ -18,19 +18,8 @@ class PrologEngine:
             self.prolog.consult(pl.name)
 
     def query(self, query):
-        list(self.prolog.query('clear_engine'))
         results = list(self.prolog.query(query))
         return results
-
-    @staticmethod
-    def results2list(results):
-        return [PrologEngine._result2string(result) for result in results]
-
-    @staticmethod
-    def _result2string(result):
-        if isinstance(result, str):
-            return result
-        return result.value
 
     @staticmethod
     def string2list(string):

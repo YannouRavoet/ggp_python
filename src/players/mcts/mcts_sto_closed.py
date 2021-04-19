@@ -132,7 +132,6 @@ class MCTSPlayerSTO(GamePlayerSTO):
         self.expl_bias: float = expl_bias  # exploration bias to use with UCB1
         self.rounds_per_loop: int = 50  # simulation rounds per expansion
 
-        self.firstRound = True
 
     def make_node(self, parent, stochastic_jointaction, deterministic_jointaction, state=None):
         """ Generates an MCTS node with parent *parent* resulting from taking jointaction *jointaction* (which results

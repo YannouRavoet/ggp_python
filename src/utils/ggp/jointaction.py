@@ -25,6 +25,8 @@ class JointAction:
         return len(self.actions)
 
     def __eq__(self, other):
+        if self is None or other is None:
+            return False
         return frozenset(self.actions) == frozenset(other.actions)  # order of the actions shouldn't matter for equality
 
     def __hash__(self):

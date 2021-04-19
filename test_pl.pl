@@ -23,7 +23,7 @@ legals_pl(State, Role, Actions),
 member(Action, Actions).
 legals_pl(State, Role, LegalActions):-
 maplist(assertz, State),
-setof(does(Role,A), legal(Role,A), LegalActions),
+(setof(does(Role,A), legal(Role,A), LegalActions) *-> true; LegalActions=[]),   %if no legal actions, return empty list instead of failing
 maplist(retract, State),!.
 terminal_pl(State):-
 maplist(assertz,State),
@@ -65,6 +65,8 @@ legal_jointaction_random_iter([RoleH|RoleT], Temp, JointAction) :-
 legals_pl(RoleH, Actions),
 random_member(Action, Actions),
 legal_jointaction_random_iter(RoleT, [Action|Temp], JointAction).
+legal_jointactions(State, JointActions):-
+setof(JA, legal_jointaction(State, JA), JointActions).
 simulate(State, Role, Value) :-
 maplist(assertz, State),
 (terminal ->
@@ -93,7 +95,7 @@ clause(action_effects(_,_,_,_), _), !.
 sees_pl(State, JointAction, Role, Percepts):-
 maplist(assertz, State),
 maplist(assertz, JointAction),
-setof(sees(Role,P), sees(Role,P), Percepts),
+(setof(sees(Role,P), sees(Role,P), Percepts) *-> true; Percepts=  []),
 maplist(retract, State),
 maplist(retract, JointAction),!.
 legal_jointaction_states(States, JAS):-
@@ -134,7 +136,12 @@ filter_jointactions_ii(State, Percepts, Role, LJAT, Temp, JointActions)
 ).
 legal_jointaction_complete(State, does(Role,Action), JointAction):-
 setof(R, (role(R), R\=Role), OtherRoles),
-legal_jointaction_iter(State, OtherRoles, [does(Role,Action)], JointAction).
+legal_jointaction_random_iter(State, OtherRoles, [does(Role,Action)], JointAction).
+legal_jointaction_random_iter(_, [], JointAction, JointAction).
+legal_jointaction_random_iter(State, [RoleH|RoleT], Temp, JointAction) :-
+legals_pl(State, RoleH, Actions),
+random_member(Action, Actions),
+legal_jointaction_random_iter(State, RoleT, [Action|Temp], JointAction).
 build_states(_, [], StatesOut, StatesOut):- !.
 build_states(StateIn, [JointActionsH|JointActionsT], Temp, StatesOut):-
 next_pl(StateIn, JointActionsH, StateOut),
@@ -265,6 +272,13 @@ simulate_sto(State, Role, NewValue),
 NewTemp is Temp + NewValue,
 NewRounds is Rounds - 1,
 simulate_sto_iter(State, Role, NewTemp, Total, NewRounds).
+legal_actions_states(States, Role, LegalActions):-
+legal_actions_states(States, Role, [], LegalActions).
+legal_actions_states([], _,  LegalActions, LegalActions).
+legal_actions_states([StatesH|StatesT], Role,  TempLegalActions, LegalActions):-
+legals_pl(StatesH, Role, StateLegalActions),
+ord_union(StateLegalActions, TempLegalActions, NewTempLegalActions),
+legal_actions_states(StatesT, Role, NewTempLegalActions, LegalActions).
 update_states(States, SAction, DAction, Percepts, Terminal, NewStates):-
 update_states_iter(States, SAction, DAction, Percepts, Terminal, [], NewStates).
 update_states_iter([], _, _, _, _, NewStates, NewStates).
@@ -272,26 +286,25 @@ update_states_iter([StatesH|StatesT], SAction, DAction, Percepts, Terminal, Temp
 update_state(StatesH, SAction, DAction, Percepts, Terminal, NewStates),
 ord_union(NewStates, TempNewStates, NewTempNewStates),
 update_states_iter(StatesT, SAction, DAction, Percepts, Terminal, NewTempNewStates, FinalNewStates).
-update_state(State, SAction, DAction, Percepts, Terminal, NewStates):-
-setof(SJA, legal_jointaction_complete(State, SAction, SJA), SJAS), %filtered so that the player action choice is the same
-setof(DJA, (member(SJA, SJAS), sja_to_dja(State, SJA, DAction, Percepts, DJA)), DJAS), %filtered so that player action outcome is the same and the percepts are the same
+update_state(State, does(Role, SAction), DAction, Percepts, Terminal, NewStates):-
+(setof(SJA, legal_jointaction(State, SJA), SJAS) *-> true; SJAS = []), %All possible stochastic actions
+(setof(SJA, (member(SJA, SJAS), member(does(Role, SAction), SJA)), SJAS_Filtered) *-> true; SJAS_Filtered = []), %filtered for the ones that have the right action choice for the player role
+(setof(DJA, SJA^(member(SJA, SJAS_Filtered), sja_to_dja(State, SJA, DJA)), DJAS) *-> true; DJAS = []), %all possible outcomes
+(setof(DJA, (member(DJA, DJAS), member(DAction, DJA)), DJAS_Filtered0) *-> true; DJAS_Filtered0 = []), %filtered for the correct outcome of the player
+(setof(DJA, (member(DJA, DJAS_Filtered0), sees_pl(State, DJA, Role, PerceptsState), PerceptsState = Percepts), DJAS_Filtered1) *-> true; DJAS_Filtered1 = []), %filtered for jointactions that deliver the right percepts
+(setof(NextState, DJA^(member(DJA, DJAS_Filtered1), next_pl(State, DJA, NextState)), NextStates) *-> true; NextStates = []),
 (Terminal ->
-setof(NextState, (member(DJA, DJAS), next_pl(State, DJA, NextState), terminal_pl(NextState)), NewStates)
+(setof(NextState, (member(NextState, NextStates), terminal_pl(NextState)), NewStates) *-> true; NewStates = [])
 ;
-setof(NextState, (member(DJA, DJAS), next_pl(State, DJA, NextState), \+terminal_pl(NextState)), NewStates)
+(setof(NextState, (member(NextState, NextStates), \+terminal_pl(NextState)), NewStates) *-> true; NewStates = [])
 ).
-sja_to_dja(State, SJA, DAction, Percepts, DJA):-
-sja_to_dja_iter(State, SJA, DAction, Percepts, [], DJA).
-sja_to_dja_iter(State, [], does(Role, _), Percepts, DJA, DJA):-
-sees_pl(State, DJA, Role, Percepts).
-sja_to_dja_iter(State, [does(RoleX, SAction)|SJAT], does(Role, DAction), Percepts, TempDJA, DJA):-
-(Role = RoleX ->
-sja_to_dja_iter(State, SJAT, does(Role, DAction), Percepts, [does(Role, DAction)|TempDJA], DJA)
-;
-outcome_pl(State, RoleX, SAction, Outcomes, _),
+sja_to_dja(State, SJA, DJA):-
+sja_to_dja_iter(State, SJA, [], DJA).
+sja_to_dja_iter(_, [], DJA, DJA).
+sja_to_dja_iter(State, [does(Role, SAction)|SJAT], TempDJA, DJA):-
+outcome_pl(State, Role, SAction, Outcomes, _),
 member(DA, Outcomes),
-sja_to_dja_iter(State, SJAT, does(Role, DAction), Percepts, [DA|TempDJA], DJA)
-).
+sja_to_dja_iter(State, SJAT, [DA|TempDJA], DJA).
 :- dynamic does/2,  %input
 loc/3, step/1, %maze
 loc/3, step/1, has_sword/0, robot_dead/0,%maze_guarded
@@ -307,7 +320,8 @@ rolling_for/1, previous_claimed_values/2, has_dice/3,claiming/1, guessing/1, gam
 turn/1, step/1, location/3, inPool/2, occupied/3,%stratego
 control/1, location/3, moved/2, %amazons
 die/3, control/1, step/1, throwndie/2, %dicegame
-loc/3, step/1, control/1. %kttt_sto
+loc/3, step/1, control/1, %kttt_sto
+asked/0, exploded/0, step/1, armed/1. %explodingbomb
 role(white).
 role(black).
 base(loc(_v, _x, _y)).

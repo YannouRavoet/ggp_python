@@ -20,6 +20,7 @@ games = {
     "meier": "ii_meier.gdl",
     "transit": "ii_transit.gdl",
     "stratego": "ii_stratego.gdl",
+    "explodingbomb": "ii_explodingbomb.gdl",
     # GDL-STO
     "maze_stochastic": "sto_maze.gdl",
     "connectfour_stochastic": "sto_connectfour.gdl",
@@ -66,4 +67,4 @@ if __name__ == "__main__":
     """""""""""""""
     manager = GameManager(args.port)
     matchID = manager.setup_match(games[args.game], args.players, args.startclock, args.playclock)
-    manager.run_matches(matchID, rounds=10)
+    manager.run_matches(matchID, rounds=100)

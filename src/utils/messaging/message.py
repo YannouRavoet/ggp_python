@@ -7,7 +7,7 @@ RE_ROUND = RE_PLAYCLOCK = RE_STARTCLOCK = "([0-9]*)"
 RE_JOINTACTION = RE_OUTCOMES = RE_PERCEPTS = "(\[.*])"
 RE_ACTION = RE_OUTCOME = "([\w\s(),]*)"
 RE_ROLE = "(.*)"
-RE_RULES = "([\w\s|\\/,.?()\[\]<>=+]*)"
+RE_RULES = "([\w\s|\\/,.?()\[\]<>=+-_]*)"
 
 class Message:
     def __init__(self, messagetype, args=None):
