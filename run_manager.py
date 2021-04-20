@@ -29,6 +29,7 @@ games = {
     "maze_stochastic_guarded": "sto_maze_medium_guarded.gdl",
     # GLD-STO-II
     "kriegtictactoe_sto": "stoii_kriegtictactoe.gdl",
+    "connectfour_stoii": "stoii_connectfour.gdl",
 }
 
 if __name__ == "__main__":
@@ -66,5 +67,15 @@ if __name__ == "__main__":
     RUN GAMEMANAGER
     """""""""""""""
     manager = GameManager(args.port)
-    matchID = manager.setup_match(games[args.game], args.players, args.startclock, args.playclock)
-    manager.run_matches(matchID, rounds=100)
+    playclocks = [10]
+    players = args.players
+    rounds = 50
+    for playclock in playclocks:
+        print(f"-"*50)
+        print(f"playclock: {playclock}")
+        matchID = manager.setup_match(games[args.game], players, args.startclock, playclock)
+        manager.run_matches(matchID, rounds)
+        players.reverse()
+        matchID = manager.setup_match(games[args.game], players, args.startclock, playclock)
+        manager.run_matches(matchID, rounds)
+        players.reverse()

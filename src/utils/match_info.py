@@ -19,7 +19,7 @@ class MatchInfo(object):
 
     def add_result(self, role, goal):
         self.results[role] = goal
-        print(f"goal [{role}]: {goal}")
+        #print(f"goal [{role}]: {goal}")
 
     def get_winner(self):
         "Returns the winning role of the match as a string. If the match was a tie, returns 'tie'."

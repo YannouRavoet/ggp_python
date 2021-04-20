@@ -37,6 +37,13 @@ class Player:
     def set_action(self, action_term):
         self.action = Action(self.role, action_term)
 
+    def __str__(self):
+        return f"{self.port} {self.role}"
+
+    def __repr__(self):
+        return str(self)
+
+
 
 class Match(object):
     def __init__(self, matchInfo, simulator, players, state_printer):
@@ -55,7 +62,7 @@ class Match(object):
         for player in self.players:
             player.reset()
         self.matchInfo.reset()
-        self.printer.print_state(self.state)
+        #self.printer.print_state(self.state)
 
     def advance_state(self):
         if not self.matchInfo.settings.has_stochastic_actions:
@@ -64,7 +71,7 @@ class Match(object):
             jointaction = self.get_outcomes()
         self.state = self.simulator.next_state(self.state, jointaction)
         self.round += 1
-        self.printer.print_state(self.state)
+        #self.printer.print_state(self.state)
 
     def get_jointaction(self):
         actions = list()
@@ -118,6 +125,7 @@ class GameManager(HTTPServer):
     def __init__(self, port):
         HTTPServer.__init__(self, ('', port), MessageHandler)
         self.matches: Dict[str, Match] = dict()
+        self.simulator = None
 
     """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
                                                         MESSAGING
@@ -207,7 +215,8 @@ class GameManager(HTTPServer):
     def setup_match(self, game_file: str, players: List[Player], startclock: int, playclock: int):
         state_printer = PrettyPrinterFactory.make_printer(game_file)
         gdl_rules = read_rules(os.path.join('games', game_file))
-        simulator = InferenceInterface(gdl_rules)
+        simulator = InferenceInterface(gdl_rules) if self.simulator is None else self.simulator
+        self.simulator = simulator
         roles = simulator.get_player_roles()
         assert (len(roles) == len(players))
         for i, role in enumerate(roles):
@@ -249,12 +258,13 @@ class GameManager(HTTPServer):
         return match.matchInfo
 
     def run_matches(self, matchID, rounds=10):
-        results = dict()
+        results = {'tie':0}
         for player in self.matches[matchID].players:
             results[player.role] = 0
 
         for r in range(0, rounds):
             matchInfo = self.run_match(matchID)
             results[matchInfo.get_winner()] += 1
-            print(results)
+            if r%5==0:
+                print(results)
         results['ties'] = rounds - sum(list(results.values()))

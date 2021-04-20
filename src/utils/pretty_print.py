@@ -106,7 +106,7 @@ class Board2DPrinter(PrettyPrinter):
         [print(fact) for fact in non_cell_facts]
 
     def parse_cell_term(self, val, x, y):
-        val = val if val != self.empty_val.upper() else None
+        val = val if self.empty_val is None or val != self.empty_val.upper() else None
         self.grid.set_cell_value(val, x, y)
 
 
@@ -150,7 +150,7 @@ class PrettyPrinterFactory:
             return Board2DPrinter(range_x=15, range_y=10, empty_val=None)
         if gamefile in ['std_tictactoe.gdl', 'ii_kriegtictactoe.gdl', 'stoii_kriegtictactoe.gdl']:
             return Board2DPrinter(range_x=3, range_y=3, empty_val='e')
-        if gamefile in ['std_connectfour.gdl', 'sto_connectfour_sto.gdl', 'sto_connectfour.gdl']:
+        if gamefile in ['std_connectfour.gdl', 'sto_connectfour.gdl', 'stoii_connectfour.gdl']:
             return Board2DPrinter(range_x=8, range_y=6, empty_val=None)
         if gamefile in ['std_bomberman.gdl']:
             return Board2DPrinter(range_x=8, range_y=8, empty_val=None)
