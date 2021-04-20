@@ -298,6 +298,33 @@ update_state(State, does(Role, SAction), DAction, Percepts, Terminal, NewStates)
 ;
 (setof(NextState, (member(NextState, NextStates), \+terminal_pl(NextState)), NewStates) *-> true; NewStates = [])
 ).
+update_states_sjas(States, SAction, DAction, Percepts, Terminal, NewStatesSJAS):-
+update_states_sjas_iter(States, SAction, DAction, Percepts, Terminal, [], NewStatesSJAS).
+update_states_sjas_iter([], _, _, _, _, NewStatesSJAS, NewStatesSJAS).
+update_states_sjas_iter([StatesH|StatesT], SAction, DAction, Percepts, Terminal, TempNewStatesSJAS, FinalNewStatesSJAS):-
+update_state_sjas(StatesH, SAction, DAction, Percepts, Terminal, NewStatesSJAS),
+ord_union(NewStatesSJAS, TempNewStatesSJAS, NewTempNewStatesSJAS),
+update_states_sjas_iter(StatesT, SAction, DAction, Percepts, Terminal, NewTempNewStatesSJAS, FinalNewStatesSJAS).
+update_state_sjas(State, does(Role, SAction), DAction, Percepts, Terminal, NewStatesSJAS):-
+(setof(SJA, legal_jointaction(State, SJA), SJAS) *-> true; SJAS = []), %All possible stochastic actions
+(setof(SJA, (member(SJA, SJAS), member(does(Role, SAction), SJA)), SJAS_Filtered) *-> true; SJAS_Filtered = []), %filtered for the ones that have the right action choice for the player role
+(setof(DJA, SJA^(member(SJA, SJAS_Filtered), sja_to_dja(State, SJA, DJA)), DJAS) *-> true; DJAS = []), %all possible outcomes
+(setof(DJA, (member(DJA, DJAS), member(DAction, DJA)), DJAS_Filtered0) *-> true; DJAS_Filtered0 = []), %filtered for the correct outcome of the player
+(setof(DJA, (member(DJA, DJAS_Filtered0), sees_pl(State, DJA, Role, PerceptsState), PerceptsState = Percepts), DJAS_Filtered1) *-> true; DJAS_Filtered1 = []), %filtered for jointactions that deliver the right percepts
+(setof(NextState, DJA^(member(DJA, DJAS_Filtered1), next_pl(State, DJA, NextState)), NextStates) *-> true; NextStates = []),
+(Terminal ->
+(setof(NextState, (member(NextState, NextStates), terminal_pl(NextState)), NextTerminalStates) *-> true; NextTerminalStates = [])
+;
+(setof(NextState, (member(NextState, NextStates), \+terminal_pl(NextState)), NextTerminalStates) *-> true; NextTerminalStates = [])
+),
+add_sjas(NextTerminalStates, [], NewStatesSJAS).
+add_sjas([], FinalStatesSJAS, FinalStatesSJAS).
+add_sjas([StateH|StateT], TempStates, FinalStatesSJAS):-
+add_sjas(StateH, NewStateSJAS),
+add_sjas(StateT, [NewStateSJAS|TempStates], FinalStatesSJAS).
+add_sjas(State, StateSJA):-
+legal_jointactions(State, SJAS),
+StateSJA = [State, SJAS].
 sja_to_dja(State, SJA, DJA):-
 sja_to_dja_iter(State, SJA, [], DJA).
 sja_to_dja_iter(_, [], DJA, DJA).
@@ -322,153 +349,157 @@ control/1, location/3, moved/2, %amazons
 die/3, control/1, step/1, throwndie/2, %dicegame
 loc/3, step/1, control/1, %kttt_sto
 asked/0, exploded/0, step/1, armed/1. %explodingbomb
-role(white).
+role(red).
 role(black).
 base(loc(_v, _x, _y)).
 base(control(_p)).
-base(step(_s)).
-init(loc(e, 0, 0)).
-init(loc(e, 0, 1)).
-init(loc(e, 0, 2)).
-init(loc(e, 1, 0)).
-init(loc(e, 1, 1)).
-init(loc(e, 1, 2)).
-init(loc(e, 2, 0)).
-init(loc(e, 2, 1)).
-init(loc(e, 2, 2)).
-init(step(1)).
-init(control(white)).
-legal(_p, mark(_x, _y)):-
-	control(_p),
-	loc(_c, _x, _y),
-	distinct(_c, _p).
-legal(_p, noop):-
-	\+control(_p).
-validmove(_p, _x, _y):-
-	loc(e, _x, _y),
-	does(_p, mark(_x, _y)).
-outcome(_role, noop, [does(_role, noop)], [1]).
-outcome(_role, mark(_x, _y), [does(_role, mark(_x, _y))], [1]):-
-	neighbours(_x, _y, _x1, _y1, _x2, _y2, _x3, _y3, _x4, _y4),
-	\+legal(_role, mark(_x1, _y1)),
-	\+legal(_role, mark(_x2, _y2)),
-	\+legal(_role, mark(_x3, _y3)),
-	\+legal(_role, mark(_x4, _y4)).
-outcome(_role, mark(_x, _y), [does(_role, mark(_x, _y)), does(_role, mark(_x1, _y1))], [0.9, 0.1]):-
-	neighbours(_x, _y, _x1, _y1, _x2, _y2, _x3, _y3, _x4, _y4),
-	legal(_role, mark(_x1, _y1)),
-	\+legal(_role, mark(_x2, _y2)),
-	\+legal(_role, mark(_x3, _y3)),
-	\+legal(_role, mark(_x4, _y4)).
-outcome(_role, mark(_x, _y), [does(_role, mark(_x, _y)), does(_role, mark(_x1, _y1)), does(_role, mark(_x2, _y2))], [0.8, 0.1, 0.1]):-
-	neighbours(_x, _y, _x1, _y1, _x2, _y2, _x3, _y3, _x4, _y4),
-	legal(_role, mark(_x1, _y1)),
-	legal(_role, mark(_x2, _y2)),
-	\+legal(_role, mark(_x3, _y3)),
-	\+legal(_role, mark(_x4, _y4)).
-outcome(_role, mark(_x, _y), [does(_role, mark(_x, _y)), does(_role, mark(_x1, _y1)), does(_role, mark(_x2, _y2)), does(_role, mark(_x3, _y3))], [0.7, 0.1, 0.1, 0.1]):-
-	neighbours(_x, _y, _x1, _y1, _x2, _y2, _x3, _y3, _x4, _y4),
-	legal(_role, mark(_x1, _y1)),
-	legal(_role, mark(_x2, _y2)),
-	legal(_role, mark(_x3, _y3)),
-	\+legal(_role, mark(_x4, _y4)).
-outcome(_role, mark(_x, _y), [does(_role, mark(_x, _y)), does(_role, mark(_x1, _y1)), does(_role, mark(_x2, _y2)), does(_role, mark(_x3, _y3)), does(_role, mark(_x4, _y4))], [0.6, 0.1, 0.1, 0.1, 0.1]):-
-	neighbours(_x, _y, _x1, _y1, _x2, _y2, _x3, _y3, _x4, _y4),
-	legal(_role, mark(_x1, _y1)),
-	legal(_role, mark(_x2, _y2)),
-	legal(_role, mark(_x3, _y3)),
-	legal(_role, mark(_x4, _y4)).
-adjacent(_i, _i1):-
-	(--(_i, _i1);++(_i, _i1)).
-adjacent(_x, _y, _x1, _y):-
-	adjacent(_x, _x1).
-adjacent(_x, _y, _x, _y1):-
-	adjacent(_y, _y1).
-neighbours(_x, _y, _x1, _y1, _x2, _y2, _x3, _y3, _x4, _y4):-
-	adjacent(_x, _y, _x1, _y1),
-	adjacent(_x, _y, _x2, _y2),
-	adjacent(_x, _y, _x3, _y3),
-	adjacent(_x, _y, _x4, _y4),
-	distinct_cells(_x, _y, _x1, _y1, _x2, _y2, _x3, _y3, _x4, _y4).
-distinct_cells(_x, _y, _x1, _y1, _x2, _y2, _x3, _y3, _x4, _y4):-
-	distinct_cell(_x, _y, _x1, _y1),
-	distinct_cell(_x, _y, _x2, _y2),
-	distinct_cell(_x, _y, _x3, _y3),
-	distinct_cell(_x, _y, _x4, _y4),
-	distinct_cell(_x1, _y1, _x2, _y2),
-	distinct_cell(_x1, _y1, _x3, _y3),
-	distinct_cell(_x1, _y1, _x4, _y4),
-	distinct_cell(_x2, _y2, _x3, _y3),
-	distinct_cell(_x2, _y2, _x4, _y4),
-	distinct_cell(_x3, _y3, _x4, _y4).
-distinct_cell(_x, _y, _x1, _y1):-
-	(distinct(_x, _x1);distinct(_y, _y1)).
-next(loc(_p, _x, _y)):-
-	validmove(_p, _x, _y).
-next(loc(_p, _x, _y)):-
-	loc(_p, _x, _y),
-	distinct(_p, e).
-next(loc(e, _x, _y)):-
-	loc(e, _x, _y),
-	\+validmove(_p, _x, _y).
-next(step(_y)):-
-	step(_x),
-	succ(_x, _y).
-next(control(white)):-
-	control(black).
-next(control(black)):-
-	control(white).
-sees(_p, valid):-
-	validmove(_p, _x, _y).
-sees(_p, invalid):-
-	does(_p, mark(_x, _y)),
-	\+validmove(_p, _x, _y).
+init(control(red)).
+legal(_player, noop):-
+	opp(_player, _other),
+	control(_other).
+legal(_player, drop(_x)):-
+	control(_player),
+	columnOpen(_x).
+outcome(_p, noop, [does(_p, noop)], [1]).
+outcome(_p, drop(_col), [does(_p, drop(_col)), does(_p, drop(_prev_col)), does(_p, drop(_next_col))], [0.8, 0.1, 0.1]):-
+	adjacent_cols(_col, _prev_col, _next_col),
+	legal(_p, drop(_prev_col)),
+	legal(_p, drop(_next_col)).
+outcome(_p, drop(_col), [does(_p, drop(_col)), does(_p, drop(_prev_col))], [0.85, 0.15]):-
+	adjacent_cols(_col, _prev_col, _next_col),
+	legal(_p, drop(_prev_col)),
+	\+legal(_p, drop(_next_col)).
+outcome(_p, drop(_col), [does(_p, drop(_col)), does(_p, drop(_next_col))], [0.85, 0.15]):-
+	adjacent_cols(_col, _prev_col, _next_col),
+	legal(_p, drop(_next_col)),
+	\+legal(_p, drop(_prev_col)).
+outcome(_p, drop(_col), [does(_p, drop(_col))], [1]):-
+	adjacent_cols(_col, _prev_col, _next_col),
+	\+legal(_p, drop(_prev_col)),
+	\+legal(_p, drop(_next_col)).
+adjacent_cols(_col, _prev_col, _next_col):-
+	succ(_prev_col, _col),
+	succ(_col, _next_col).
+outcome(_p, drop(0), [does(_p, drop(0)), does(_p, drop(1))], [0.85, 0.15]):-
+	legal(_p, drop(1)).
+outcome(_p, drop(0), [does(_p, drop(0))], [1]):-
+	\+legal(_p, drop(1)).
+adjacent_cols(_col, _prev_col, _next_col):-
+	succ(_prev_col, _col),
+	succ(_col, _next_col).
+sees(_p, _y):-
+	does(_p, drop(_x)),
+	topOpen(_x, _y).
 sees(_p, nothing):-
 	does(_p, noop).
+next(loc(_player, _x, 5)):-
+	does(_player, drop(_x)),
+	columnEmpty(_x).
+next(loc(_player, _x, _y2)):-
+	does(_player, drop(_x)),
+	topOpen(_x, _y2).
+next(loc(_player, _x, _y)):-
+	loc(_player, _x, _y).
+next(control(_other)):-
+	control(_player),
+	opp(_player, _other).
 terminal:-
-	line(white).
+	line(red).
 terminal:-
 	line(black).
 terminal:-
-	\+open.
-line(_c):-
-	loc(_c, _x, 0),
-	loc(_c, _x, 1),
-	loc(_c, _x, 2).
-line(_c):-
-	loc(_c, 0, _y),
-	loc(_c, 1, _y),
-	loc(_c, 2, _y).
-line(_c):-
-	loc(_c, 0, 0),
-	loc(_c, 1, 1),
-	loc(_c, 2, 2).
-line(_c):-
-	loc(_c, 0, 2),
-	loc(_c, 1, 1),
-	loc(_c, 2, 0).
-open:-
-	loc(e, _x, _y).
-goal(white, 100):-
-	line(white).
-goal(white, 50):-
-	\+line(white),
-	\+line(black).
-goal(white, 0):-
+	\+boardOpen.
+goal(red, 100):-
+	line(red).
+goal(red, 50):-
+	\+line(red),
+	\+line(black),
+	\+boardOpen.
+goal(red, 0):-
 	line(black).
+goal(red, 0):-
+	\+line(red),
+	\+line(black),
+	boardOpen.
 goal(black, 100):-
 	line(black).
 goal(black, 50):-
-	\+line(white),
-	\+line(black).
+	\+line(red),
+	\+line(black),
+	\+boardOpen.
 goal(black, 0):-
-	line(white).
-equal(_x, _x).
-++(-1, 0).
-++(0, 1).
-++(1, 2).
-++(2, 3).
---(3, 2).
---(2, 1).
---(1, 0).
---(0, -1).
+	line(red).
+goal(black, 0):-
+	\+line(red),
+	\+line(black),
+	boardOpen.
+opp(red, black).
+opp(black, red).
+topOpen(_x, _y):-
+	open(_x, _y),
+	succ(_y, _ybelow),
+	\+open(_x, _ybelow).
+open(_x, _y):-
+	x(_x),
+	y(_y),
+	\+loc(red, _x, _y),
+	\+loc(black, _x, _y).
+columnOpen(_x):-
+	open(_x, 0).
+columnEmpty(_x):-
+	open(_x, 5).
+boardOpen:-
+	x(_x),
+	columnOpen(_x).
+line(_player):-
+	location(_player, _x1, _y),
+	succ(_x1, _x2),
+	succ(_x2, _x3),
+	succ(_x3, _x4),
+	location(_player, _x2, _y),
+	location(_player, _x3, _y),
+	location(_player, _x4, _y).
+line(_player):-
+	location(_player, _x, _y1),
+	succ(_y1, _y2),
+	succ(_y2, _y3),
+	succ(_y3, _y4),
+	location(_player, _x, _y2),
+	location(_player, _x, _y3),
+	location(_player, _x, _y4).
+line(_player):-
+	location(_player, _x1, _y1),
+	succ(_x1, _x2),
+	succ(_x2, _x3),
+	succ(_x3, _x4),
+	succ(_y1, _y2),
+	succ(_y2, _y3),
+	succ(_y3, _y4),
+	location(_player, _x2, _y2),
+	location(_player, _x3, _y3),
+	location(_player, _x4, _y4).
+line(_player):-
+	location(_player, _x1, _y4),
+	succ(_x1, _x2),
+	succ(_x2, _x3),
+	succ(_x3, _x4),
+	succ(_y3, _y4),
+	succ(_y2, _y3),
+	succ(_y1, _y2),
+	location(_player, _x2, _y3),
+	location(_player, _x3, _y2),
+	location(_player, _x4, _y1).
+x(0).
+x(1).
+x(2).
+x(3).
+x(4).
+x(5).
+x(6).
+x(7).
+y(0).
+y(1).
+y(2).
+y(3).
+y(4).
+y(5).

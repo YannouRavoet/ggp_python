@@ -44,7 +44,6 @@ class Player:
         return str(self)
 
 
-
 class Match(object):
     def __init__(self, matchInfo, simulator, players, state_printer):
         self.matchInfo: MatchInfo = matchInfo
@@ -62,7 +61,7 @@ class Match(object):
         for player in self.players:
             player.reset()
         self.matchInfo.reset()
-        #self.printer.print_state(self.state)
+        self.printer.print_state(self.state)
 
     def advance_state(self):
         if not self.matchInfo.settings.has_stochastic_actions:
@@ -71,7 +70,7 @@ class Match(object):
             jointaction = self.get_outcomes()
         self.state = self.simulator.next_state(self.state, jointaction)
         self.round += 1
-        #self.printer.print_state(self.state)
+        self.printer.print_state(self.state)
 
     def get_jointaction(self):
         actions = list()
@@ -257,14 +256,13 @@ class GameManager(HTTPServer):
         match.save_results()
         return match.matchInfo
 
-    def run_matches(self, matchID, rounds=10):
-        results = {'tie':0}
+    def run_matches(self, matchID, rounds):
+        results = {'tie': 0}
         for player in self.matches[matchID].players:
             results[player.role] = 0
 
-        for r in range(0, rounds):
+        for r in range(1, rounds + 1):
             matchInfo = self.run_match(matchID)
             results[matchInfo.get_winner()] += 1
-            if r%5==0:
+            if r % 5 == 0:
                 print(results)
-        results['ties'] = rounds - sum(list(results.values()))

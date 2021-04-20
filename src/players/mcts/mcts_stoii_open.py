@@ -179,9 +179,9 @@ class OpenMCTSPlayerSTOII(GamePlayerSTOII):
                                                               self.outcome_hist[-1],
                                                               self.percept_hist[-1],
                                                               self.terminal)
-        print(f"{self.role} currently has {len(self.root_states)} root states")
         legal_actions = self.simulator.legal_actions_from_states(self.root_states, self.role)
         self.root_node.filter_children(legal_actions)
+        print(f"{self.role} currently has {len(self.root_states)} root states")
 
     def pick_random_root(self):
         self.state = random.choice(self.root_states)

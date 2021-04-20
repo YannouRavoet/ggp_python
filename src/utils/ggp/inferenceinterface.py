@@ -499,3 +499,22 @@ class InferenceInterface(I_InferenceInterface):
                                     f"NewStates)")
         new_states = [State(facts) for facts in results[0]['NewStates']]
         return new_states
+
+    #Returns a second list with all the valid SJA's
+    def update_states_closedMCTS(self, states:List[State], stochastic_action:Action, deterministic_action:Action,
+                                 percepts: Percepts, terminal: bool):
+        results = self.engine.query(f"update_states_sjas("
+                                    f"[{','.join([state.to_term() for state in states])}], "
+                                    f"{stochastic_action.to_term()},"
+                                    f"{deterministic_action.to_term()},"
+                                    f"{percepts.to_term()},"
+                                    f"{'true' if terminal else 'false'},"
+                                    f"NewStatesSJAS)")
+        new_states = list()
+        state_sjas = dict()
+        for state, sjas in results[0]['NewStatesSJAS']:
+            state = State(state)
+            new_states.append(state)
+            state_sjas[state] = [JointAction([Action.from_string(action) for action in jointaction])
+                                 for jointaction in sjas]
+        return new_states, state_sjas

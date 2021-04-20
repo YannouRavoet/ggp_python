@@ -72,6 +72,12 @@ class MCTSNodeSTOII:
             all_children.extend(child.children.values())
         return all_children
 
+    def add_children_to_dict(self, state_node_dict):
+        for chance_node in self.children.values():
+            for decision_node in chance_node.children.values():
+                if decision_node is not None and decision_node.state in state_node_dict.keys():
+                    state_node_dict[decision_node.state].append(decision_node)
+
     def get_child(self, stochastic_jointaction, deterministic_jointaction):
         return self.get_child_chancenode(stochastic_jointaction).get_child(deterministic_jointaction)
 
@@ -223,6 +229,7 @@ class MCTSPlayerSTOII(GamePlayerSTOII):
                                                              self.outcome_hist[-1],
                                                              self.percept_hist[-1],
                                                              self.terminal)
+
         new_root_nodes = dict()
         for state in new_root_states:
             new_root_nodes[state] = list()
@@ -231,12 +238,21 @@ class MCTSPlayerSTOII(GamePlayerSTOII):
             for child_node in child_nodes:
                 if child_node is not None and child_node.state in new_root_states:
                     new_root_nodes[child_node.state].append(child_node)
-        self.root_nodes = self.combine_nodes(new_root_nodes)
-        for root_node in self.root_nodes:
-            root_node.parent = None
-        if len(self.root_nodes) == 0:
-            print('Error')
-        print(f"Currently {len(self.root_nodes)} root_nodes.")
+        self.root_nodes = self.shallow_combine(new_root_nodes)
+        print(f"{self.role} currently has {len(self.root_nodes)} root nodes")
+
+    def shallow_combine(self, state_node_dict):
+        new_root_nodes = list()
+        for state, nodes in state_node_dict.items():
+            if len(nodes) == 0:
+                new_root_nodes.append(self.make_node(None, None, None, state))
+                continue
+            new_node: MCTSNodeSTOII = nodes[0]
+            new_node.parent = None
+            new_node.nb_visit = sum(list(map(lambda n: n.nb_visit, nodes)))
+            new_node.total_goal = sum(list(map(lambda n: n.total_goal, nodes)))
+            new_root_nodes.append(new_node)
+        return new_root_nodes
 
     def combine_nodes(self, state_node_dict):
         new_root_nodes = list()
