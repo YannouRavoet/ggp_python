@@ -67,9 +67,9 @@ if __name__ == "__main__":
     RUN GAMEMANAGER
     """""""""""""""
     manager = GameManager(args.port)
-    playclocks = [30]
+    playclocks = [30, 45, 60]
     players = args.players
-    rounds = 50
+    rounds = 15
     for playclock in playclocks:
         print(f"-"*50)
         print(f"playclock: {playclock}")
