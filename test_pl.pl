@@ -350,156 +350,260 @@ die/3, control/1, step/1, throwndie/2, %dicegame
 loc/3, step/1, control/1, %kttt_sto
 asked/0, exploded/0, step/1, armed/1. %explodingbomb
 role(red).
-role(black).
-base(loc(_v, _x, _y)).
+role(blue).
 base(control(_p)).
+base(step(_s)).
+base(loc(_p, _x, _y)).
+base(inPool(_r, _p)).
+base(occupied(_x, _y, _r)).
 init(control(red)).
-legal(_player, noop):-
-	opp(_player, _other),
-	control(_other).
-legal(_player, drop(_x)):-
-	control(_player),
-	columnOpen(_x).
-outcome(_p, noop, [does(_p, noop)], [1]).
-outcome(_p, drop(_col), [does(_p, drop(_col)), does(_p, drop(_prev_col)), does(_p, drop(_next_col))], [0.8, 0.1, 0.1]):-
-	adjacent_cols(_col, _prev_col, _next_col),
-	legal(_p, drop(_prev_col)),
-	legal(_p, drop(_next_col)).
-outcome(_p, drop(_col), [does(_p, drop(_col)), does(_p, drop(_prev_col))], [0.85, 0.15]):-
-	adjacent_cols(_col, _prev_col, _next_col),
-	legal(_p, drop(_prev_col)),
-	\+legal(_p, drop(_next_col)).
-outcome(_p, drop(_col), [does(_p, drop(_col)), does(_p, drop(_next_col))], [0.85, 0.15]):-
-	adjacent_cols(_col, _prev_col, _next_col),
-	legal(_p, drop(_next_col)),
-	\+legal(_p, drop(_prev_col)).
-outcome(_p, drop(_col), [does(_p, drop(_col))], [1]):-
-	adjacent_cols(_col, _prev_col, _next_col),
-	\+legal(_p, drop(_prev_col)),
-	\+legal(_p, drop(_next_col)).
-adjacent_cols(_col, _prev_col, _next_col):-
-	succ(_prev_col, _col),
-	succ(_col, _next_col).
-outcome(_p, drop(0), [does(_p, drop(0)), does(_p, drop(1))], [0.85, 0.15]):-
-	legal(_p, drop(1)).
-outcome(_p, drop(0), [does(_p, drop(0))], [1]):-
-	\+legal(_p, drop(1)).
-adjacent_cols(_col, _prev_col, _next_col):-
-	succ(_prev_col, _col),
-	succ(_col, _next_col).
-sees(_p, _y):-
-	does(_p, drop(_x)),
-	topOpen(_x, _y).
-sees(_p, nothing):-
-	does(_p, noop).
-next(loc(_player, _x, 5)):-
-	does(_player, drop(_x)),
-	columnEmpty(_x).
-next(loc(_player, _x, _y2)):-
-	does(_player, drop(_x)),
-	topOpen(_x, _y2).
-next(loc(_player, _x, _y)):-
-	loc(_player, _x, _y).
-next(control(_other)):-
-	control(_player),
-	opp(_player, _other).
+init(step(1)).
+init(loc(b, _x, 2)):-
+	x(_x).
+init(loc(b, _x, 3)):-
+	x(_x).
+init(inPool(_r, _p)):-
+	role(_r),
+	piece(_p).
+piece(flag).
+piece(bomb).
+piece(spy).
+piece(marshal).
+piece(miner).
+piece(scout).
+immobile(flag).
+immobile(bomb).
+legal(_r, place(_x, _y, _p)):-
+	role(_r),
+	step(_s),
+	cell_to_place(_r, _s, _x, _y),
+	inPool(_r, _p).
+legal(_r, noop):-
+	playingPhase,
+	\+control(_r).
+legal(_r, noop):-
+	role(_r),
+	playingPhase,
+	control(_r),
+	\+anyMobile(_r).
+legal(_r, move_sto(_x, _y, _x2, _y2)):-
+	playingPhase,
+	control(_r),
+	occupied(_x, _y, _r),
+	loc(_p, _x, _y),
+	\+immobile(_p),
+	adjacent(_x, _y, _x2, _y2),
+	\+occupied(_x2, _y2, _r).
+legal(_r, move_sto(_x, _y, _x3, _y3)):-
+	playingPhase,
+	control(_r),
+	occupied(_x, _y, _r),
+	loc(scout, _x, _y),
+	adjacent(_x, _y, _x2, _y2),
+	loc(b, _x2, _y2),
+	adjacent(_x2, _y2, _x3, _y3),
+	\+occupied(_x3, _y3, _r).
+next(control(blue)):-
+	control(red).
+next(control(red)):-
+	control(blue).
+next(step(_n1)):-
+	step(_n0),
+	succ(_n0, _n1).
+next(inPool(_r, _p)):-
+	inPool(_r, _p),
+	\+does(_r, place(_x, _y, _p)).
+next(loc(_p, _x, _y)):-
+	does(_r, place(_x, _y, _p)).
+next(occupied(_x, _y, _r)):-
+	does(_r, place(_x, _y, _p)).
+next(loc(_p, _x, _y)):-
+	loc(_p, _x, _y),
+	opp(_r, _r2),
+	does(_r2, move_lose(_x0, _y0, _x, _y)).
+next(occupied(_x, _y, _r)):-
+	opp(_r, _r2),
+	does(_r2, move_lose(_x0, _y0, _x, _y)).
+next(loc(_p, _x, _y)):-
+	opp(_r, _r2),
+	does(_r2, move_beat(_x0, _y0, _x, _y)),
+	loc(_p, _x0, _y0).
+next(occupied(_x, _y, _r2)):-
+	does(_r2, move_beat(_x0, _y0, _x, _y)).
+next(loc(b, _x, _y)):-
+	does(_r, move_lose(_x, _y, _x2, _y2)).
+next(loc(b, _x, _y)):-
+	does(_r, move_beat(_x, _y, _x2, _y2)).
+next(loc(_p, _x, _y)):-
+	loc(_p, _x0, _y0),
+	does(_r, move(_x0, _y0, _x, _y)).
+next(occupied(_x, _y, _r)):-
+	does(_r, move(_x0, _y0, _x, _y)).
+next(loc(b, _x, _y)):-
+	does(_r, move(_x, _y, _x2, _y2)).
+next(loc(_p, _x, _y)):-
+	loc(_p, _x, _y),
+	\+anyMoveFrom(_x, _y),
+	\+anyMoveTo(_x, _y).
+next(occupied(_x, _y, _r)):-
+	occupied(_x, _y, _r),
+	\+anyMoveFrom(_x, _y),
+	\+anyMoveTo(_x, _y).
+sees(_r, did(_r, _m)):-
+	does(_r, _m).
+sees(_r, did(_r2, move(_x, _y, _x2, _y2))):-
+	opp(_r, _r2),
+	does(_r2, move(_x, _y, _x2, _y2)).
+sees(_r, did(_r2, move_lose(_x, _y, _x2, _y2))):-
+	opp(_r, _r2),
+	does(_r2, move_lose(_x, _y, _x2, _y2)).
+sees(_r, did(_r2, move_beat(_x, _y, _x2, _y2))):-
+	opp(_r, _r2),
+	does(_r2, move_beat(_x, _y, _x2, _y2)).
+sees(_r, loc(_p, _x, _y)):-
+	opp(_r, _r2),
+	occupied(_x, _y, _r2),
+	loc(_p, _x, _y),
+	(does(_r, move_lose(_x0, _y0, _x, _y));does(_r, move_beat(_x0, _y0, _x, _y))).
+sees(_r, loc(_p, _x, _y)):-
+	opp(_r, _r2),
+	occupied(_x, _y, _r2),
+	loc(_p, _x, _y),
+	(does(_r2, move_lose(_x, _y, _x2, _y2));does(_r2, move_beat(_x, _y, _x2, _y2))),
+	occupied(_x2, _y2, _r).
+outcome(_r, place(_x, _y, _p), [does(_r, place(_x, _y, _p))], [1]).
+outcome(_r, noop, [does(_r, noop)], [1]).
+outcome(_r, move_sto(_x, _y, _x2, _y2), [does(_r, move(_x, _y, _x2, _y2))], [1]):-
+	loc(b, _x2, _y2).
+outcome(_r, move_sto(_x, _y, _x2, _y2), [does(_r, move_beat(_x, _y, _x2, _y2)), does(_r, move_lose(_x, _y, _x2, _y2))], [_prob_p, _prob_p2]):-
+	loc(_p, _x, _y),
+	distinct(_p, b),
+	loc(_p2, _x2, _y2),
+	distinct(_p2, b),
+	winrate(_p, _p2, _prob_p, _prob_p2).
+winrate(_p, flag, 1, 0).
+winrate(spy, bomb, 0.05, 0.95).
+winrate(scout, bomb, 0.05, 0.95).
+winrate(miner, bomb, 0.95, 0.05).
+winrate(marshal, bomb, 0.05, 0.95).
+winrate(spy, spy, 0.5, 0.5).
+winrate(scout, spy, 0.6, 0.4).
+winrate(miner, spy, 0.7, 0.3).
+winrate(marshal, spy, 0.95, 0.05).
+winrate(spy, scout, 0.4, 0.6).
+winrate(scout, scout, 0.5, 0.5).
+winrate(miner, scout, 0.6, 0.4).
+winrate(marshal, scout, 0.9, 0.1).
+winrate(spy, miner, 0.3, 0.7).
+winrate(scout, miner, 0.4, 0.6).
+winrate(miner, miner, 0.5, 0.5).
+winrate(marshal, miner, 0.8, 0.2).
+winrate(spy, marshal, 0.95, 0.05).
+winrate(scout, marshal, 0.1, 0.9).
+winrate(miner, marshal, 0.2, 0.8).
+winrate(marshal, marshal, 0.5, 0.5).
 terminal:-
-	line(red).
+	role(_r),
+	\+anyFlag(_r),
+	playingPhase.
 terminal:-
-	line(black).
+	playingPhase,
+	\+anyMobile(red),
+	\+anyMobile(blue).
 terminal:-
-	\+boardOpen.
+	step(51).
+anyFlag(_r):-
+	loc(flag, _x, _y),
+	occupied(_x, _y, _r).
 goal(red, 100):-
-	line(red).
-goal(red, 50):-
-	\+line(red),
-	\+line(black),
-	\+boardOpen.
+	\+anyFlag(blue).
+goal(blue, 100):-
+	\+anyFlag(red).
+goal(_r, 50):-
+	role(_r),
+	anyFlag(red),
+	anyFlag(blue),
+	step(51).
+goal(_r, 50):-
+	role(_r),
+	anyFlag(red),
+	anyFlag(blue),
+	\+anyMobile(red),
+	\+anyMobile(blue).
 goal(red, 0):-
-	line(black).
-goal(red, 0):-
-	\+line(red),
-	\+line(black),
-	boardOpen.
-goal(black, 100):-
-	line(black).
-goal(black, 50):-
-	\+line(red),
-	\+line(black),
-	\+boardOpen.
-goal(black, 0):-
-	line(red).
-goal(black, 0):-
-	\+line(red),
-	\+line(black),
-	boardOpen.
-opp(red, black).
-opp(black, red).
-topOpen(_x, _y):-
-	open(_x, _y),
-	succ(_y, _ybelow),
-	\+open(_x, _ybelow).
-open(_x, _y):-
-	x(_x),
-	y(_y),
-	\+loc(red, _x, _y),
-	\+loc(black, _x, _y).
-columnOpen(_x):-
-	open(_x, 0).
-columnEmpty(_x):-
-	open(_x, 5).
-boardOpen:-
-	x(_x),
-	columnOpen(_x).
-line(_player):-
-	location(_player, _x1, _y),
-	succ(_x1, _x2),
-	succ(_x2, _x3),
-	succ(_x3, _x4),
-	location(_player, _x2, _y),
-	location(_player, _x3, _y),
-	location(_player, _x4, _y).
-line(_player):-
-	location(_player, _x, _y1),
-	succ(_y1, _y2),
-	succ(_y2, _y3),
-	succ(_y3, _y4),
-	location(_player, _x, _y2),
-	location(_player, _x, _y3),
-	location(_player, _x, _y4).
-line(_player):-
-	location(_player, _x1, _y1),
-	succ(_x1, _x2),
-	succ(_x2, _x3),
-	succ(_x3, _x4),
-	succ(_y1, _y2),
-	succ(_y2, _y3),
-	succ(_y3, _y4),
-	location(_player, _x2, _y2),
-	location(_player, _x3, _y3),
-	location(_player, _x4, _y4).
-line(_player):-
-	location(_player, _x1, _y4),
-	succ(_x1, _x2),
-	succ(_x2, _x3),
-	succ(_x3, _x4),
-	succ(_y3, _y4),
-	succ(_y2, _y3),
-	succ(_y1, _y2),
-	location(_player, _x2, _y3),
-	location(_player, _x3, _y2),
-	location(_player, _x4, _y1).
+	\+anyFlag(red).
+goal(blue, 0):-
+	\+anyFlag(blue).
+opp(_r, _r2):-
+	role(_r),
+	role(_r2),
+	distinct(_r, _r2).
 x(0).
 x(1).
 x(2).
-x(3).
-x(4).
-x(5).
-x(6).
-x(7).
 y(0).
 y(1).
 y(2).
 y(3).
 y(4).
 y(5).
+playingPhase:-
+	\+step(1),
+	\+step(2),
+	\+step(3),
+	\+step(4),
+	\+step(5),
+	\+step(6).
+cell_to_place(red, 1, 0, 0).
+cell_to_place(red, 2, 1, 0).
+cell_to_place(red, 3, 2, 0).
+cell_to_place(red, 4, 0, 1).
+cell_to_place(red, 5, 1, 1).
+cell_to_place(red, 6, 2, 1).
+cell_to_place(blue, 1, 0, 4).
+cell_to_place(blue, 2, 1, 4).
+cell_to_place(blue, 3, 2, 4).
+cell_to_place(blue, 4, 0, 5).
+cell_to_place(blue, 5, 1, 5).
+cell_to_place(blue, 6, 2, 5).
+adjacent(_x, _y, _x, _y2):-
+	x(_x),
+	cellsucc(_y, _y2).
+adjacent(_x, _y, _x, _y2):-
+	x(_x),
+	cellsucc(_y2, _y).
+adjacent(_x, _y, _x2, _y):-
+	x(_x),
+	x(_x2),
+	y(_y),
+	cellsucc(_x, _x2).
+adjacent(_x, _y, _x2, _y):-
+	x(_x),
+	x(_x2),
+	y(_y),
+	cellsucc(_x2, _x).
+cellsucc(0, 1).
+cellsucc(1, 2).
+cellsucc(2, 3).
+cellsucc(3, 4).
+cellsucc(4, 5).
+anyMobile(_r):-
+	role(_r),
+	playingPhase,
+	occupied(_x, _y, _r),
+	loc(_p, _x, _y),
+	\+immobile(_p),
+	adjacent(_x, _y, _x2, _y2),
+	\+occupied(_x2, _y2, _r).
+anyMoveFrom(_x, _y):-
+	does(_r, move(_x, _y, _x2, _y2)).
+anyMoveFrom(_x, _y):-
+	does(_r, move_beat(_x, _y, _x2, _y2)).
+anyMoveFrom(_x, _y):-
+	does(_r, move_lose(_x, _y, _x2, _y2)).
+anyMoveTo(_x2, _y2):-
+	does(_r, move(_x, _y, _x2, _y2)).
+anyMoveTo(_x2, _y2):-
+	does(_r, move_beat(_x, _y, _x2, _y2)).
+anyMoveTo(_x2, _y2):-
+	does(_r, move_lose(_x, _y, _x2, _y2)).

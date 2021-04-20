@@ -1,5 +1,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Stratego
+;;; Stochastic version: higher value pieces are more likely to beat other pieces
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Roles
@@ -10,359 +11,24 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Base
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(base (turn ?p))
+(base (control ?p))
 (base (step ?s))
-(base (location ?p ?x ?y))
+(base (loc ?p ?x ?y))
 (base (inPool ?r ?p))
 (base (occupied ?x ?y ?r))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; INIT Relations
+;;; INIT
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(init (turn red))
-(<= (next (turn blue))
-	(turn red))
-
+(init (control red))
 (init (step 1))
-(<= (next (step ?n1))
-	(step ?n0)
-	(succ ?n0 ?n1))
-
-(<= (init (location b ?x 3))
+(<= (init (loc e ?x 2))
 	(x ?x))
-
-(<= (init (location b ?x 4))
+(<= (init (loc e ?x 3))
 	(x ?x))
-
 (<= (init (inPool ?r ?p))
 	(role ?r)
 	(piece ?p))
-
-
-(<= (placed ?r ?p)
-	(does ?r (place ?x ?y ?p)))
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; LEGAL Relations
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(<= (legal ?r (place ?x ?y ?p))
-	(role ?r)
-	(true (step ?s))
-	(order ?r ?s ?x ?y)
-	(true (inPool ?r ?p))
-)
-
-(<= (legal ?r (move ?x ?y ?x2 ?y2))
-	(role ?r)
-	playingPhase
-	(true (turn ?r))
-	(true (occupied ?x ?y ?r))
-	(true (location ?p ?x ?y))
-	(adjacent ?x ?y ?x2 ?y2)
-	(not (immobile ?p))
-	(not (true (occupied ?x2 ?y2 ?r)))
-)
-
-(<= (legal ?r (move ?x ?y ?x3 ?y3))
-	(role ?r)
-	playingPhase
-	(true (turn ?r))
-	(true (occupied ?x ?y ?r))
-	(true (location scout ?x ?y))
-	(adjacent ?x ?y ?x2 ?y2)
-	(adjacent ?x2 ?y2 ?x3 ?y3)
-	(true (location b ?x2 ?y2))
-	(not (true (occupied ?x3 ?y3 ?r)))
-)
-(<= (legal ?r noop)
-	(role ?r)
-	playingPhase
-	(not (true (turn ?r)))
-)
-(<= (legal ?r noop)
-	(role ?r)
-	playingPhase
-	(true (turn ?r))
-	(not (anyMobile ?r))
-)
-
-
-(<= playingPhase
-	(not (true (step 1)))
-	(not (true (step 2)))
-	(not (true (step 3)))
-	(not (true (step 4)))
-	(not (true (step 5)))
-	(not (true (step 6)))
-)
-
-(<= (adjacent ?x ?y ?x ?y2)
-	(x ?x)
-	(cellsucc ?y ?y2)
-)
-(<= (adjacent ?x ?y ?x ?y2)
-	(x ?x)
-	(cellsucc ?y2 ?y)
-)
-(<= (adjacent ?x ?y ?x2 ?y)
-	(x ?x)
-	(x ?x2)
-	(y ?y)
-	(cellsucc ?x ?x2)
-)
-(<= (adjacent ?x ?y ?x2 ?y)
-	(x ?x)
-	(x ?x2)
-	(y ?y)
-	(cellsucc ?x2 ?x)
-)
-
-(<= (anyMobile ?r)
-	(role ?r)
-	playingPhase
-	(true (occupied ?x ?y ?r))
-	(true (location ?p ?x ?y))
-	(adjacent ?x ?y ?x2 ?y2)
-	(not (immobile ?p))
-	(not (true (occupied ?x2 ?y2 ?r)))
-)
-(<= (anyMoveFrom ?x ?y)
-	(does ?r (move ?x ?y ?x2 ?y2))
-)
-
-(<= (anyMoveTo ?x2 ?y2)
-	(does ?r (move ?x ?y ?x2 ?y2))
-)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; NEXT Relations
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(<= (next (turn red))
-	(true (turn blue))
-)
-
-(<= (next (inPool ?r ?p))
-	(true (inPool ?r ?p))
-	(not (placed ?r ?p))
-)
-
-(<= (next (location ?p ?x ?y))
-	(does ?r (place ?x ?y ?p))
-)
-
-(<= (next (occupied ?x ?y ?r))
-	(does ?r (place ?x ?y ?p))
-)
-
-(<= (next (location ?p ?x ?y))
-	(true (location ?p ?x ?y))
-	(true (occupied ?x ?y ?r))
-	(does ?r2 (move ?x0 ?y0 ?x ?y))
-	(distinct ?r ?r2)
-	(true (location ?p0 ?x0 ?y0))
-	(beats ?p0 ?p ?p)
-)
-
-(<= (next (location ?p0 ?x ?y))
-	(true (location ?p ?x ?y))
-	(true (occupied ?x ?y ?r))
-	(does ?r2 (move ?x0 ?y0 ?x ?y))
-	(distinct ?r ?r2)
-	(true (location ?p0 ?x0 ?y0))
-	(beats ?p0 ?p ?p0)
-)
-
-(<= (next (location b ?x ?y))
-	(true (location ?p ?x ?y))
-	(true (occupied ?x ?y ?r))
-	(does ?r2 (move ?x0 ?y0 ?x ?y))
-	(distinct ?r ?r2)
-	(true (location ?p ?x0 ?y0))
-)
-
-(<= (next (occupied ?x ?y ?r))
-	(true (location ?p ?x ?y))
-	(true (occupied ?x ?y ?r))
-	(does ?r2 (move ?x0 ?y0 ?x ?y))
-	(distinct ?r ?r2)
-	(true (location ?p0 ?x0 ?y0))
-	(beats ?p0 ?p ?p)
-)
-
-(<= (next (occupied ?x ?y ?r2))
-	(true (location ?p ?x ?y))
-	(true (occupied ?x ?y ?r))
-	(does ?r2 (move ?x0 ?y0 ?x ?y))
-	(distinct ?r ?r2)
-	(true (location ?p0 ?x0 ?y0))
-	(beats ?p0 ?p ?p0)
-)
-
-(<= (next (location ?p ?x ?y))
-	(true (location ?p ?x ?y))
-	(not (anyMoveFrom ?x ?y))
-	(not (anyMoveTo ?x ?y))
-)
-
-(<= (next (location b ?x ?y))
-	(does ?r (move ?x ?y ?x2 ?y2))
-)
-
-(<= (next (occupied ?x ?y ?r))
-	(true (occupied ?x ?y ?r))
-	(not (anyMoveFrom ?x ?y))
-	(not (anyMoveTo ?x ?y))
-)
-
-(<= (next (location ?p ?x ?y))
-	(true (location ?p ?x0 ?y0))
-	(does ?r (move ?x0 ?y0 ?x ?y))
-	(role ?r2)
-	(not (true (occupied ?x ?y ?r2)))
-	(distinct ?r ?r2)
-)
-
-(<= (next (occupied ?x ?y ?r))
-	(true (occupied ?x0 ?y0 ?r))
-	(does ?r (move ?x0 ?y0 ?x ?y))
-	(role ?r2)
-	(not (true (occupied ?x ?y ?r2)))
-	(distinct ?r ?r2)
-)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; SEES Relations
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(<= (sees ?r (did ?r ?m))
-	(does ?r ?m)
-)
-
-(<= (sees ?r (did ?r2 (move ?x ?y ?x2 ?y2)))
-	(role ?r)
-	(does ?r2 (move ?x ?y ?x2 ?y2))
-	(distinct ?r ?r2)
-)
-
-(<= (sees ?r (location ?p ?x ?y))
-	(true (location ?p ?x ?y))
-	(true (occupied ?x ?y ?r2))
-	(does ?r (move ?x0 ?y0 ?x ?y))
-	(distinct ?r ?r2)
-)
-
-(<= (sees ?r (location ?p ?x ?y))
-	(role ?r)
-	(does ?r2 (move ?x ?y ?x2 ?y2))
-	(true (occupied ?x2 ?y2 ?r))
-	(true (location ?p ?x ?y))
-)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; TERMINAL Relations
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(<= terminal
-	(role ?r)
-	(not (anyFlag ?r))
-	playingPhase
-)
-
-(<= terminal
-	playingPhase
-	(not (anyMobile red))
-	(not (anyMobile blue))
-)
-
-(<= terminal
-	(true (step 51))
-)
-
-(<= (anyFlag ?r)
-	(true (location flag ?x ?y))
-	(true (occupied ?x ?y ?r))
-)
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; GOAL Relations
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(<= (goal red 100)
-	(not (anyFlag blue))
-)
-
-(<= (goal blue 100)
-	(not (anyFlag red))
-)
-
-(<= (goal ?r 50)
-	(role ?r)
-	(anyFlag red)
-	(anyFlag blue)
-	(true (step 51))
-)
-
-(<= (goal ?r 50)
-	(role ?r)
-	(anyFlag red)
-	(anyFlag blue)
-	(not (anyMobile red))
-	(not (anyMobile blue))
-)
-
-(<= (goal red 0)
-	(not (anyFlag red))
-)
-
-(<= (goal blue 0)
-	(not (anyFlag blue))
-)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; SUPPORT Relations
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;; attacker, defender, winner
-;;; if attacker and defender are equal, both lose
-
-(beats spy flag spy)
-(beats spy bomb bomb)
-(beats spy marshal spy)
-(beats spy miner miner)
-(beats spy scout scout)
-
-(beats marshal flag marshal)
-(beats marshal bomb bomb)
-(beats marshal spy marshal)
-(beats marshal miner marshal)
-(beats marshal scout marshal)
-
-(beats miner flag miner)
-(beats miner bomb miner)
-(beats miner spy miner)
-(beats miner marshal marshal)
-(beats miner scout miner)
-
-(beats scout flag scout)
-(beats scout bomb bomb)
-(beats scout spy scout)
-(beats scout marshal marshal)
-(beats scout miner miner)
-
-(cellsucc 1 2)
-(cellsucc 2 3)
-(cellsucc 3 4)
-(cellsucc 4 5)
-(cellsucc 5 6)
-
-(x 1)
-(x 2)
-(x 3)
-
-(y 1)
-(y 2)
-(y 3)
-(y 4)
-(y 5)
-(y 6)
 
 (piece flag)
 (piece bomb)
@@ -373,18 +39,302 @@
 
 (immobile flag)
 (immobile bomb)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; LEGAL
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(<= (legal ?r (place ?x ?y ?p))
+	(role ?r)
+	(step ?s)
+	(cell_to_place ?r ?s ?x ?y)
+	(inPool ?r ?p))
+
+;;; PLAYING PHASE
+(<= (legal ?r noop)
+	playingPhase
+	(not (control ?r)))
+(<= (legal ?r noop)
+	(role ?r)
+	playingPhase
+	(control ?r)
+	(not (anyMobile ?r)))
+
+;;; move any piece that is not immobile to a spot that is not occupied by the same role
+(<= (legal ?r (move_sto ?x ?y ?x2 ?y2))
+	playingPhase
+	(control ?r)
+	(occupied ?x ?y ?r)
+	(loc ?p ?x ?y)
+	(not (immobile ?p))
+	(adjacent ?x ?y ?x2 ?y2)
+	(not (occupied ?x2 ?y2 ?r)))
+
+;;; move scout two cells
+(<= (legal ?r (move_sto ?x ?y ?x3 ?y3))
+	playingPhase
+	(control ?r)
+	(occupied ?x ?y ?r)
+	(loc scout ?x ?y)
+	(adjacent ?x ?y ?x2 ?y2)
+	(loc e ?x2 ?y2)
+	(adjacent ?x2 ?y2 ?x3 ?y3)
+	(not (occupied ?x3 ?y3 ?r)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; NEXT
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(<= (next (control blue))
+	(control red))
+(<= (next (control red))
+	(control blue))
+(<= (next (step ?n1))
+	(step ?n0)
+	(succ ?n0 ?n1))
+
+;;; PLACING PHASE
+(<= (next (inPool ?r ?p))
+	(inPool ?r ?p)
+	(not (does ?r (place ?x ?y ?p))))
+(<= (next (loc ?p ?x ?y))
+	(does ?r (place ?x ?y ?p)))
+(<= (next (occupied ?x ?y ?r))
+	(does ?r (place ?x ?y ?p)))
+
+;;; PLAYING PHASE
+;;; Attacks: only one piece left
+(<= (next (loc ?p ?x ?y))
+	(loc ?p ?x ?y)
+	(opp ?r ?r2)
+	(does ?r2 (move_lose ?x0 ?y0 ?x ?y)))
+(<= (next (occupied ?x ?y ?r))
+	(opp ?r ?r2)
+	(does ?r2 (move_lose ?x0 ?y0 ?x ?y)))
 
 
-(order red 1 1 1)
-(order red 2 2 1)
-(order red 3 3 1)
-(order red 4 1 2)
-(order red 5 2 2)
-(order red 6 3 2)
+(<= (next (loc ?p ?x ?y))
+	(opp ?r ?r2)
+	(does ?r2 (move_beat ?x0 ?y0 ?x ?y))
+	(loc ?p ?x0 ?y0))
+(<= (next (occupied ?x ?y ?r2))
+	(does ?r2 (move_beat ?x0 ?y0 ?x ?y)))
 
-(order blue 1 1 5)
-(order blue 2 2 5)
-(order blue 3 3 5)
-(order blue 4 1 6)
-(order blue 5 2 6)
-(order blue 6 3 6)
+(<= (next (loc e ?x ?y))
+	(does ?r (move_lose ?x ?y ?x2 ?y2)))
+(<= (next (loc e ?x ?y))
+	(does ?r (move_beat ?x ?y ?x2 ?y2)))
+
+;;; Simple moves
+(<= (next (loc ?p ?x ?y))
+	(loc ?p ?x0 ?y0)
+	(does ?r (move ?x0 ?y0 ?x ?y)))
+(<= (next (occupied ?x ?y ?r))
+	(does ?r (move ?x0 ?y0 ?x ?y)))
+(<= (next (loc e ?x ?y))
+	(does ?r (move ?x ?y ?x2 ?y2)))
+
+;;; Retain pieces that did not move
+(<= (next (loc ?p ?x ?y))
+	(loc ?p ?x ?y)
+	(not (anyMoveFrom ?x ?y))
+	(not (anyMoveTo ?x ?y)))
+(<= (next (occupied ?x ?y ?r))
+	(occupied ?x ?y ?r)
+	(not (anyMoveFrom ?x ?y))
+	(not (anyMoveTo ?x ?y)))
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; SEES
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; You see your moves
+(<= (sees ?r (did ?r ?m))
+	(does ?r ?m))
+;;; You see your opponents moves
+(<= (sees ?r (did ?r2 (move ?x ?y ?x2 ?y2)))
+	(opp ?r ?r2)
+	(does ?r2 (move ?x ?y ?x2 ?y2)))
+(<= (sees ?r (did ?r2 (move_lose ?x ?y ?x2 ?y2)))
+	(opp ?r ?r2)
+	(does ?r2 (move_lose ?x ?y ?x2 ?y2)))
+(<= (sees ?r (did ?r2 (move_beat ?x ?y ?x2 ?y2)))
+	(opp ?r ?r2)
+	(does ?r2 (move_beat ?x ?y ?x2 ?y2)))
+
+;;; You see the value of an opponent piece that you attacked
+(<= (sees ?r (loc ?p ?x ?y))
+	(opp ?r ?r2)
+	(occupied ?x ?y ?r2)
+	(loc ?p ?x ?y)
+	(or (does ?r (move_lose ?x0 ?y0 ?x ?y))
+	    (does ?r (move_beat ?x0 ?y0 ?x ?y))))
+
+;;; You see the value of an opponent piece that attacked you
+(<= (sees ?r (loc ?p ?x ?y))
+	(opp ?r ?r2)
+	(occupied ?x ?y ?r2)
+	(loc ?p ?x ?y)
+	(or (does ?r2 (move_lose ?x ?y ?x2 ?y2))
+	    (does ?r2 (move_beat ?x ?y ?x2 ?y2)))
+	(occupied ?x2 ?y2 ?r))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; OUTCOME
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(outcome ?r (place ?x ?y ?p) (set (does ?r (place ?x ?y ?p))) (set 1))
+(outcome ?r noop (set (does ?r noop)) (set 1))
+
+;;; No attack: move is deterministic
+(<= (outcome ?r (move_sto ?x ?y ?x2 ?y2) (set (does ?r (move ?x ?y ?x2 ?y2))) (set 1))
+    (loc e ?x2 ?y2))
+;;; OTHER
+(<= (outcome ?r (move_sto ?x ?y ?x2 ?y2) (set (does ?r (move_beat ?x ?y ?x2 ?y2))
+                                              (does ?r (move_lose ?x ?y ?x2 ?y2)))
+                                         (set ?prob_p ?prob_p2))
+    (loc ?p ?x ?y)
+    (distinct ?p b)
+    (loc ?p2 ?x2 ?y2)
+    (distinct ?p2 b)
+    (winrate ?p ?p2 ?prob_p ?prob_p2))
+
+(winrate ?p flag 1 0)
+
+(winrate spy bomb 0.05 0.95)    (winrate scout bomb 0.05 0.95)  (winrate miner bomb 0.95 0.05)  (winrate marshal bomb 0.05 0.95)
+(winrate spy spy 0.5 0.5)       (winrate scout spy 0.6 0.4)     (winrate miner spy 0.7 0.3)     (winrate marshal spy 0.95 0.05)
+(winrate spy scout 0.4 0.6)     (winrate scout scout 0.5 0.5)   (winrate miner scout 0.6 0.4)   (winrate marshal scout 0.9 0.1)
+(winrate spy miner 0.3 0.7)     (winrate scout miner 0.4 0.6)   (winrate miner miner 0.5 0.5)   (winrate marshal miner 0.8 0.2)
+(winrate spy marshal 0.95 0.05) (winrate scout marshal 0.1 0.9) (winrate miner marshal 0.2 0.8) (winrate marshal marshal 0.5 0.5)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; TERMINAL
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(<= terminal
+	(role ?r)
+	(not (anyFlag ?r))
+	playingPhase)
+
+(<= terminal
+	playingPhase
+	(not (anyMobile red))
+	(not (anyMobile blue)))
+
+(<= terminal
+	(true (step 51)))
+
+(<= (anyFlag ?r)
+	(loc flag ?x ?y)
+	(occupied ?x ?y ?r))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; GOAL
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(<= (goal red 100)
+	(not (anyFlag blue)))
+
+(<= (goal blue 100)
+	(not (anyFlag red)))
+
+(<= (goal ?r 50)
+	(role ?r)
+	(anyFlag red)
+	(anyFlag blue)
+	(step 51))
+
+(<= (goal ?r 50)
+	(role ?r)
+	(anyFlag red)
+	(anyFlag blue)
+	(not (anyMobile red))
+	(not (anyMobile blue)))
+
+(<= (goal red 0)
+	(not (anyFlag red)))
+
+(<= (goal blue 0)
+	(not (anyFlag blue)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; SUPPORT
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(<= (opp ?r ?r2)
+    (role ?r)
+    (role ?r2)
+    (distinct ?r ?r2))
+
+(x 0)
+(x 1)
+(x 2)
+
+(y 0)
+(y 1)
+(y 2)
+(y 3)
+(y 4)
+(y 5)
+
+(<= playingPhase
+	(not (step 1))
+	(not (step 2))
+	(not (step 3))
+	(not (step 4))
+	(not (step 5))
+	(not (step 6)))
+
+(cell_to_place red 1 0 0)
+(cell_to_place red 2 1 0)
+(cell_to_place red 3 2 0)
+(cell_to_place red 4 0 1)
+(cell_to_place red 5 1 1)
+(cell_to_place red 6 2 1)
+
+(cell_to_place blue 1 0 4)
+(cell_to_place blue 2 1 4)
+(cell_to_place blue 3 2 4)
+(cell_to_place blue 4 0 5)
+(cell_to_place blue 5 1 5)
+(cell_to_place blue 6 2 5)
+
+
+(<= (adjacent ?x ?y ?x ?y2)
+	(x ?x)
+	(cellsucc ?y ?y2))
+(<= (adjacent ?x ?y ?x ?y2)
+	(x ?x)
+	(cellsucc ?y2 ?y))
+(<= (adjacent ?x ?y ?x2 ?y)
+	(x ?x)
+	(x ?x2)
+	(y ?y)
+	(cellsucc ?x ?x2))
+(<= (adjacent ?x ?y ?x2 ?y)
+	(x ?x)
+	(x ?x2)
+	(y ?y)
+	(cellsucc ?x2 ?x))
+
+(cellsucc 0 1)
+(cellsucc 1 2)
+(cellsucc 2 3)
+(cellsucc 3 4)
+(cellsucc 4 5)
+
+(<= (anyMobile ?r)
+	(role ?r)
+	playingPhase
+	(occupied ?x ?y ?r)
+	(loc ?p ?x ?y)
+	(not (immobile ?p))
+	(adjacent ?x ?y ?x2 ?y2)
+	(not (occupied ?x2 ?y2 ?r)))
+
+(<= (anyMoveFrom ?x ?y)
+	(does ?r (move ?x ?y ?x2 ?y2)))
+(<= (anyMoveFrom ?x ?y)
+	(does ?r (move_beat ?x ?y ?x2 ?y2)))
+(<= (anyMoveFrom ?x ?y)
+	(does ?r (move_lose ?x ?y ?x2 ?y2)))
+
+(<= (anyMoveTo ?x2 ?y2)
+	(does ?r (move ?x ?y ?x2 ?y2)))
+(<= (anyMoveTo ?x2 ?y2)
+	(does ?r (move_beat ?x ?y ?x2 ?y2)))
+(<= (anyMoveTo ?x2 ?y2)
+	(does ?r (move_lose ?x ?y ?x2 ?y2)))

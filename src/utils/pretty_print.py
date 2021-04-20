@@ -5,13 +5,14 @@ from copy import deepcopy
 
 class Grid:
     class GridCell:
-        def __init__(self, x, y, value):
+        def __init__(self, x, y, value, nb_chars):
             self.x = x  # col
             self.y = y  # row
             self.value = value
+            self.nb_chars = nb_chars
 
         def print(self):
-            print(f" {self.value if self.value is not None else '.'} ", end='')
+            print(f" {self.value if self.value is not None else '.'*self.nb_chars} ", end='')
 
         def __repr__(self):
             return str(f'{self.x}, {self.y}: {self.value}')
@@ -22,7 +23,7 @@ class Grid:
         def __hash__(self):
             return hash(str(self.x) + str(self.y))
 
-    def __init__(self, range_x, range_y):
+    def __init__(self, range_x, range_y, nb_chars):
         """ Builds a grid with the following index structure
                  range_x = range_y = 4
                    +---+---+---+---+
@@ -39,13 +40,14 @@ class Grid:
         """
         self.range_x = range_x
         self.range_y = range_y
+        self.nb_chars = nb_chars
         self.cells = list()
 
     def empty_grid(self):
         self.cells.clear()
         for y in range(0, self.range_y):
             for x in range(0, self.range_x):
-                self.cells.append(self.GridCell(x, y, None))
+                self.cells.append(self.GridCell(x, y, None, self.nb_chars))
 
     def _cell_index(self, x, y):
         return y * self.range_x + x
@@ -56,7 +58,7 @@ class Grid:
 
     def print(self):
         def hor_bar(range_x):
-            print('+---' * (range_x) + '+')
+            print(('+-' + '-' * self.nb_chars + '-') * range_x + '+')
 
         def ver_bar(end=''):
             print('|', end=end)
@@ -89,9 +91,10 @@ class PrettyPrinter:
 
 
 class Board2DPrinter(PrettyPrinter):
-    def __init__(self, range_x, range_y, empty_val):
-        self.grid = Grid(range_x, range_y)
+    def __init__(self, range_x, range_y, empty_val, nb_chars=1):
+        self.grid = Grid(range_x, range_y, nb_chars)
         self.empty_val = empty_val  # the string used in the game_rules to represent an empty cell
+        self.nb_chars = nb_chars
 
     def _print(self, state):
         self.grid.empty_grid()
@@ -99,7 +102,7 @@ class Board2DPrinter(PrettyPrinter):
         for fact in state.facts:
             m = re.match(r"loc\((\w*), ([0-9]*), ([0-9]*)\)", fact)
             if m is not None:
-                self.parse_cell_term(m.group(1)[0].upper(), int(m.group(2)), int(m.group(3)))
+                self.parse_cell_term(m.group(1)[0:self.nb_chars].upper(), int(m.group(2)), int(m.group(3)))
             else:
                 non_cell_facts.append(fact)
         self.grid.print()
@@ -156,6 +159,8 @@ class PrettyPrinterFactory:
             return Board2DPrinter(range_x=8, range_y=8, empty_val=None)
         if gamefile in ['std_amazons.gdl', 'sto_amazons.gdl']:
             return Board2DPrinter(range_x=10, range_y=10, empty_val=None)
+        if gamefile in ['stoii_stratego.gdl']:
+            return Board2DPrinter(range_x=3, range_y=6, empty_val='e', nb_chars=2)
         if gamefile in ['sto_dicegame.gdl']:
             return DiceGamePrinter()
         return PrettyPrinter()

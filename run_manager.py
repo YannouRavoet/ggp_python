@@ -30,6 +30,7 @@ games = {
     # GLD-STO-II
     "kriegtictactoe_sto": "stoii_kriegtictactoe.gdl",
     "connectfour_stoii": "stoii_connectfour.gdl",
+    "stratego_stoii": "stoii_stratego.gdl",
 }
 
 if __name__ == "__main__":
