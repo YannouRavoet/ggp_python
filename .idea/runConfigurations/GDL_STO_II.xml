@@ -2,7 +2,7 @@
   <configuration default="false" name="GDL-STO-II" type="Multirun" factoryName="Multirun" separateTabs="false" reuseTabsWithFailures="true" startOneByOne="true" markFailedProcess="true" hideSuccessProcess="false" delayTime="1.0">
     <runConfiguration name="stoii_open_mcts@5601" type="Python" />
     <runConfiguration name="stoii_closed_mcts@5602" type="Python" />
-    <runConfiguration name="stoii_stratego" type="Python" />
+    <runConfiguration name="stoii_connectfour" type="Python" />
     <method v="2" />
   </configuration>
 </component>
