@@ -161,6 +161,8 @@ class PrettyPrinterFactory:
             return Board2DPrinter(range_x=10, range_y=10, empty_val=None)
         if gamefile in ['stoii_stratego.gdl']:
             return Board2DPrinter(range_x=3, range_y=6, empty_val='e', nb_chars=2)
+        if gamefile in ['stoii_stratego_large.gdl']:
+            return Board2DPrinter(range_x=5, range_y=6, empty_val='e', nb_chars=2)
         if gamefile in ['sto_dicegame.gdl']:
             return DiceGamePrinter()
         return PrettyPrinter()

@@ -358,9 +358,9 @@ base(inPool(_r, _p)).
 base(occupied(_x, _y, _r)).
 init(control(red)).
 init(step(1)).
-init(loc(b, _x, 2)):-
+init(loc(e, _x, 2)):-
 	x(_x).
-init(loc(b, _x, 3)):-
+init(loc(e, _x, 3)):-
 	x(_x).
 init(inPool(_r, _p)):-
 	role(_r),
@@ -368,9 +368,13 @@ init(inPool(_r, _p)):-
 piece(flag).
 piece(bomb).
 piece(spy).
-piece(marshal).
-piece(miner).
 piece(scout).
+piece(miner).
+piece(sergeant).
+piece(lieutenant).
+piece(captain).
+piece(major).
+piece(marshal).
 immobile(flag).
 immobile(bomb).
 legal(_r, place(_x, _y, _p)):-
@@ -400,7 +404,7 @@ legal(_r, move_sto(_x, _y, _x3, _y3)):-
 	occupied(_x, _y, _r),
 	loc(scout, _x, _y),
 	adjacent(_x, _y, _x2, _y2),
-	loc(b, _x2, _y2),
+	loc(e, _x2, _y2),
 	adjacent(_x2, _y2, _x3, _y3),
 	\+occupied(_x3, _y3, _r).
 next(control(blue)):-
@@ -430,16 +434,16 @@ next(loc(_p, _x, _y)):-
 	loc(_p, _x0, _y0).
 next(occupied(_x, _y, _r2)):-
 	does(_r2, move_beat(_x0, _y0, _x, _y)).
-next(loc(b, _x, _y)):-
+next(loc(e, _x, _y)):-
 	does(_r, move_lose(_x, _y, _x2, _y2)).
-next(loc(b, _x, _y)):-
+next(loc(e, _x, _y)):-
 	does(_r, move_beat(_x, _y, _x2, _y2)).
 next(loc(_p, _x, _y)):-
 	loc(_p, _x0, _y0),
 	does(_r, move(_x0, _y0, _x, _y)).
 next(occupied(_x, _y, _r)):-
 	does(_r, move(_x0, _y0, _x, _y)).
-next(loc(b, _x, _y)):-
+next(loc(e, _x, _y)):-
 	does(_r, move(_x, _y, _x2, _y2)).
 next(loc(_p, _x, _y)):-
 	loc(_p, _x, _y),
@@ -474,33 +478,85 @@ sees(_r, loc(_p, _x, _y)):-
 outcome(_r, place(_x, _y, _p), [does(_r, place(_x, _y, _p))], [1]).
 outcome(_r, noop, [does(_r, noop)], [1]).
 outcome(_r, move_sto(_x, _y, _x2, _y2), [does(_r, move(_x, _y, _x2, _y2))], [1]):-
-	loc(b, _x2, _y2).
+	loc(e, _x2, _y2).
 outcome(_r, move_sto(_x, _y, _x2, _y2), [does(_r, move_beat(_x, _y, _x2, _y2)), does(_r, move_lose(_x, _y, _x2, _y2))], [_prob_p, _prob_p2]):-
 	loc(_p, _x, _y),
-	distinct(_p, b),
+	distinct(_p, e),
 	loc(_p2, _x2, _y2),
-	distinct(_p2, b),
+	distinct(_p2, e),
 	winrate(_p, _p2, _prob_p, _prob_p2).
 winrate(_p, flag, 1, 0).
 winrate(spy, bomb, 0.05, 0.95).
 winrate(scout, bomb, 0.05, 0.95).
 winrate(miner, bomb, 0.95, 0.05).
-winrate(marshal, bomb, 0.05, 0.95).
 winrate(spy, spy, 0.5, 0.5).
 winrate(scout, spy, 0.6, 0.4).
 winrate(miner, spy, 0.7, 0.3).
-winrate(marshal, spy, 0.95, 0.05).
 winrate(spy, scout, 0.4, 0.6).
 winrate(scout, scout, 0.5, 0.5).
 winrate(miner, scout, 0.6, 0.4).
-winrate(marshal, scout, 0.9, 0.1).
 winrate(spy, miner, 0.3, 0.7).
 winrate(scout, miner, 0.4, 0.6).
 winrate(miner, miner, 0.5, 0.5).
-winrate(marshal, miner, 0.8, 0.2).
+winrate(spy, sergeant, 0.25, 0.75).
+winrate(scout, sergeant, 0.35, 0.65).
+winrate(miner, sergeant, 0.4, 0.6).
+winrate(spy, lieutenant, 0.20, 0.80).
+winrate(scout, lieutenant, 0.3, 0.7).
+winrate(miner, lieutenant, 0.35, 0.65).
+winrate(spy, captain, 0.15, 0.85).
+winrate(scout, captain, 0.25, 0.75).
+winrate(miner, captain, 0.30, 0.70).
+winrate(spy, major, 0.1, 0.90).
+winrate(scout, major, 0.20, 0.80).
+winrate(miner, major, 0.25, 0.75).
 winrate(spy, marshal, 0.95, 0.05).
 winrate(scout, marshal, 0.1, 0.9).
 winrate(miner, marshal, 0.2, 0.8).
+winrate(sergeant, bomb, 0.05, 0.95).
+winrate(lieutenant, bomb, 0.05, 0.95).
+winrate(captain, bomb, 0.05, 0.95).
+winrate(sergeant, spy, 0.75, 0.25).
+winrate(lieutenant, spy, 0.80, 0.20).
+winrate(captain, spy, 0.85, 0.15).
+winrate(sergeant, scout, 0.70, 0.30).
+winrate(lieutenant, scout, 0.75, 0.25).
+winrate(captain, scout, 0.80, 0.20).
+winrate(sergeant, miner, 0.60, 0.40).
+winrate(lieutenant, miner, 0.70, 0.30).
+winrate(captain, miner, 0.75, 0.25).
+winrate(sergeant, sergeant, 0.50, 0.50).
+winrate(lieutenant, sergeant, 0.60, 0.40).
+winrate(captain, sergeant, 0.70, 0.30).
+winrate(sergeant, lieutenant, 0.40, 0.60).
+winrate(lieutenant, lieutenant, 0.50, 0.50).
+winrate(captain, lieutenant, 0.60, 0.40).
+winrate(sergeant, captain, 0.35, 0.65).
+winrate(lieutenant, captain, 0.40, 0.60).
+winrate(captain, captain, 0.50, 0.50).
+winrate(sergeant, major, 0.30, 0.70).
+winrate(lieutenant, major, 0.35, 0.65).
+winrate(captain, major, 0.40, 0.60).
+winrate(sergeant, marshal, 0.25, 0.75).
+winrate(lieutenant, marshal, 0.30, 0.70).
+winrate(captain, marshal, 0.35, 0.65).
+winrate(major, bomb, 0.05, 0.95).
+winrate(marshal, bomb, 0.05, 0.95).
+winrate(major, spy, 0.90, 0.10).
+winrate(marshal, spy, 0.95, 0.05).
+winrate(major, scout, 0.85, 0.15).
+winrate(marshal, scout, 0.9, 0.1).
+winrate(major, miner, 0.80, 0.20).
+winrate(marshal, miner, 0.85, 0.25).
+winrate(major, sergeant, 0.75, 0.25).
+winrate(marshal, sergeant, 0.80, 0.20).
+winrate(major, lieutenant, 0.70, 0.30).
+winrate(marshal, lieutenant, 0.75, 0.25).
+winrate(major, captain, 0.60, 0.40).
+winrate(marshal, captain, 0.70, 0.30).
+winrate(major, major, 0.50, 0.50).
+winrate(marshal, major, 0.6, 0.4).
+winrate(major, marshal, 0.40, 0.60).
 winrate(marshal, marshal, 0.5, 0.5).
 terminal:-
 	role(_r),
@@ -511,7 +567,7 @@ terminal:-
 	\+anyMobile(red),
 	\+anyMobile(blue).
 terminal:-
-	step(51).
+	step(100).
 anyFlag(_r):-
 	loc(flag, _x, _y),
 	occupied(_x, _y, _r).
@@ -523,7 +579,7 @@ goal(_r, 50):-
 	role(_r),
 	anyFlag(red),
 	anyFlag(blue),
-	step(51).
+	step(100).
 goal(_r, 50):-
 	role(_r),
 	anyFlag(red),
@@ -541,6 +597,8 @@ opp(_r, _r2):-
 x(0).
 x(1).
 x(2).
+x(3).
+x(4).
 y(0).
 y(1).
 y(2).
@@ -553,19 +611,31 @@ playingPhase:-
 	\+step(3),
 	\+step(4),
 	\+step(5),
-	\+step(6).
+	\+step(6),
+	\+step(7),
+	\+step(8),
+	\+step(9),
+	\+step(10).
 cell_to_place(red, 1, 0, 0).
 cell_to_place(red, 2, 1, 0).
 cell_to_place(red, 3, 2, 0).
-cell_to_place(red, 4, 0, 1).
-cell_to_place(red, 5, 1, 1).
-cell_to_place(red, 6, 2, 1).
+cell_to_place(red, 4, 3, 0).
+cell_to_place(red, 5, 4, 0).
+cell_to_place(red, 6, 0, 1).
+cell_to_place(red, 7, 1, 1).
+cell_to_place(red, 8, 2, 1).
+cell_to_place(red, 9, 3, 1).
+cell_to_place(red, 10, 4, 1).
 cell_to_place(blue, 1, 0, 4).
 cell_to_place(blue, 2, 1, 4).
 cell_to_place(blue, 3, 2, 4).
-cell_to_place(blue, 4, 0, 5).
-cell_to_place(blue, 5, 1, 5).
-cell_to_place(blue, 6, 2, 5).
+cell_to_place(blue, 4, 3, 4).
+cell_to_place(blue, 5, 4, 4).
+cell_to_place(blue, 6, 0, 5).
+cell_to_place(blue, 7, 1, 5).
+cell_to_place(blue, 8, 2, 5).
+cell_to_place(blue, 9, 3, 5).
+cell_to_place(blue, 10, 4, 5).
 adjacent(_x, _y, _x, _y2):-
 	x(_x),
 	cellsucc(_y, _y2).

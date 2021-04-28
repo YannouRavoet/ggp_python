@@ -68,15 +68,17 @@ if __name__ == "__main__":
     RUN GAMEMANAGER
     """""""""""""""
     manager = GameManager(args.port)
-    playclocks = [30,45,60]
+    games = {"stoii_stratego_large.gdl": [30, 45, 60]}
     players = args.players
     rounds = 35
-    for playclock in playclocks:
-        print(f"-"*50)
-        print(f"playclock: {playclock}")
-        matchID = manager.setup_match(games[args.game], players, args.startclock, playclock)
-        manager.run_matches(matchID, rounds)
-        players.reverse()
-        matchID = manager.setup_match(games[args.game], players, args.startclock, playclock)
-        manager.run_matches(matchID, rounds)
-        players.reverse()
+    for game_file, playclocks in games.items():
+        print(f"{game_file.upper()}")
+        for playclock in playclocks:
+            print(f"-"*50)
+            print(f"playclock: {playclock}")
+            matchID = manager.setup_match(game_file, players, args.startclock, playclock)
+            manager.run_matches(matchID, rounds)
+            players.reverse()
+            matchID = manager.setup_match(game_file, players, args.startclock, playclock)
+            manager.run_matches(matchID, rounds)
+            players.reverse()

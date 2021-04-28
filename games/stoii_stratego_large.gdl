@@ -1,0 +1,381 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Stratego
+;;; Stochastic version: higher value pieces are more likely to beat other pieces
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Roles
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(role red)
+(role blue)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Base
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(base (control ?p))
+(base (step ?s))
+(base (loc ?p ?x ?y))
+(base (inPool ?r ?p))
+(base (occupied ?x ?y ?r))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; INIT
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(init (control red))
+(init (step 1))
+(<= (init (loc e ?x 2))
+	(x ?x))
+(<= (init (loc e ?x 3))
+	(x ?x))
+(<= (init (inPool ?r ?p))
+	(role ?r)
+	(piece ?p))
+
+(piece flag)
+(piece bomb)
+(piece spy)
+(piece scout)
+(piece miner)
+(piece sergeant)
+(piece lieutenant)
+(piece captain)
+(piece major)
+(piece marshal)
+
+(immobile flag)
+(immobile bomb)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; LEGAL
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(<= (legal ?r (place ?x ?y ?p))
+	(role ?r)
+	(step ?s)
+	(cell_to_place ?r ?s ?x ?y)
+	(inPool ?r ?p))
+
+;;; PLAYING PHASE
+(<= (legal ?r noop)
+	playingPhase
+	(not (control ?r)))
+(<= (legal ?r noop)
+	(role ?r)
+	playingPhase
+	(control ?r)
+	(not (anyMobile ?r)))
+
+;;; move any piece that is not immobile to a spot that is not occupied by the same role
+(<= (legal ?r (move_sto ?x ?y ?x2 ?y2))
+	playingPhase
+	(control ?r)
+	(occupied ?x ?y ?r)
+	(loc ?p ?x ?y)
+	(not (immobile ?p))
+	(adjacent ?x ?y ?x2 ?y2)
+	(not (occupied ?x2 ?y2 ?r)))
+
+;;; move scout two cells
+(<= (legal ?r (move_sto ?x ?y ?x3 ?y3))
+	playingPhase
+	(control ?r)
+	(occupied ?x ?y ?r)
+	(loc scout ?x ?y)
+	(adjacent ?x ?y ?x2 ?y2)
+	(loc e ?x2 ?y2)
+	(adjacent ?x2 ?y2 ?x3 ?y3)
+	(not (occupied ?x3 ?y3 ?r)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; NEXT
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(<= (next (control blue))
+	(control red))
+(<= (next (control red))
+	(control blue))
+(<= (next (step ?n1))
+	(step ?n0)
+	(succ ?n0 ?n1))
+
+;;; PLACING PHASE
+(<= (next (inPool ?r ?p))
+	(inPool ?r ?p)
+	(not (does ?r (place ?x ?y ?p))))
+(<= (next (loc ?p ?x ?y))
+	(does ?r (place ?x ?y ?p)))
+(<= (next (occupied ?x ?y ?r))
+	(does ?r (place ?x ?y ?p)))
+
+;;; PLAYING PHASE
+;;; Attacks: only one piece left
+(<= (next (loc ?p ?x ?y))
+	(loc ?p ?x ?y)
+	(opp ?r ?r2)
+	(does ?r2 (move_lose ?x0 ?y0 ?x ?y)))
+(<= (next (occupied ?x ?y ?r))
+	(opp ?r ?r2)
+	(does ?r2 (move_lose ?x0 ?y0 ?x ?y)))
+
+
+(<= (next (loc ?p ?x ?y))
+	(opp ?r ?r2)
+	(does ?r2 (move_beat ?x0 ?y0 ?x ?y))
+	(loc ?p ?x0 ?y0))
+(<= (next (occupied ?x ?y ?r2))
+	(does ?r2 (move_beat ?x0 ?y0 ?x ?y)))
+
+(<= (next (loc e ?x ?y))
+	(does ?r (move_lose ?x ?y ?x2 ?y2)))
+(<= (next (loc e ?x ?y))
+	(does ?r (move_beat ?x ?y ?x2 ?y2)))
+
+;;; Simple moves
+(<= (next (loc ?p ?x ?y))
+	(loc ?p ?x0 ?y0)
+	(does ?r (move ?x0 ?y0 ?x ?y)))
+(<= (next (occupied ?x ?y ?r))
+	(does ?r (move ?x0 ?y0 ?x ?y)))
+(<= (next (loc e ?x ?y))
+	(does ?r (move ?x ?y ?x2 ?y2)))
+
+;;; Retain pieces that did not move
+(<= (next (loc ?p ?x ?y))
+	(loc ?p ?x ?y)
+	(not (anyMoveFrom ?x ?y))
+	(not (anyMoveTo ?x ?y)))
+(<= (next (occupied ?x ?y ?r))
+	(occupied ?x ?y ?r)
+	(not (anyMoveFrom ?x ?y))
+	(not (anyMoveTo ?x ?y)))
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; SEES
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; You see your moves
+(<= (sees ?r (did ?r ?m))
+	(does ?r ?m))
+;;; You see your opponents moves
+(<= (sees ?r (did ?r2 (move ?x ?y ?x2 ?y2)))
+	(opp ?r ?r2)
+	(does ?r2 (move ?x ?y ?x2 ?y2)))
+(<= (sees ?r (did ?r2 (move_lose ?x ?y ?x2 ?y2)))
+	(opp ?r ?r2)
+	(does ?r2 (move_lose ?x ?y ?x2 ?y2)))
+(<= (sees ?r (did ?r2 (move_beat ?x ?y ?x2 ?y2)))
+	(opp ?r ?r2)
+	(does ?r2 (move_beat ?x ?y ?x2 ?y2)))
+
+;;; You see the value of an opponent piece that you attacked
+(<= (sees ?r (loc ?p ?x ?y))
+	(opp ?r ?r2)
+	(occupied ?x ?y ?r2)
+	(loc ?p ?x ?y)
+	(or (does ?r (move_lose ?x0 ?y0 ?x ?y))
+	    (does ?r (move_beat ?x0 ?y0 ?x ?y))))
+
+;;; You see the value of an opponent piece that attacked you
+(<= (sees ?r (loc ?p ?x ?y))
+	(opp ?r ?r2)
+	(occupied ?x ?y ?r2)
+	(loc ?p ?x ?y)
+	(or (does ?r2 (move_lose ?x ?y ?x2 ?y2))
+	    (does ?r2 (move_beat ?x ?y ?x2 ?y2)))
+	(occupied ?x2 ?y2 ?r))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; OUTCOME
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(outcome ?r (place ?x ?y ?p) (set (does ?r (place ?x ?y ?p))) (set 1))
+(outcome ?r noop (set (does ?r noop)) (set 1))
+
+;;; No attack: move is deterministic
+(<= (outcome ?r (move_sto ?x ?y ?x2 ?y2) (set (does ?r (move ?x ?y ?x2 ?y2))) (set 1))
+    (loc e ?x2 ?y2))
+;;; OTHER
+(<= (outcome ?r (move_sto ?x ?y ?x2 ?y2) (set (does ?r (move_beat ?x ?y ?x2 ?y2))
+                                              (does ?r (move_lose ?x ?y ?x2 ?y2)))
+                                         (set ?prob_p ?prob_p2))
+    (loc ?p ?x ?y)
+    (distinct ?p e)
+    (loc ?p2 ?x2 ?y2)
+    (distinct ?p2 e)
+    (winrate ?p ?p2 ?prob_p ?prob_p2))
+
+(winrate ?p flag 1 0)
+
+(winrate spy bomb 0.05 0.95)        (winrate scout bomb 0.05 0.95)        (winrate miner bomb 0.95 0.05)
+(winrate spy spy 0.5 0.5)           (winrate scout spy 0.6 0.4)           (winrate miner spy 0.7 0.3)
+(winrate spy scout 0.4 0.6)         (winrate scout scout 0.5 0.5)         (winrate miner scout 0.6 0.4)
+(winrate spy miner 0.3 0.7)         (winrate scout miner 0.4 0.6)         (winrate miner miner 0.5 0.5)
+(winrate spy sergeant 0.25 0.75)    (winrate scout sergeant 0.35 0.65)    (winrate miner sergeant 0.4 0.6)
+(winrate spy lieutenant 0.20 0.80)  (winrate scout lieutenant 0.3 0.7)    (winrate miner lieutenant 0.35 0.65)
+(winrate spy captain 0.15 0.85)     (winrate scout captain 0.25 0.75)     (winrate miner captain 0.30 0.70)
+(winrate spy major 0.1 0.90)        (winrate scout major 0.20 0.80)       (winrate miner major 0.25 0.75)
+(winrate spy marshal 0.95 0.05)     (winrate scout marshal 0.1 0.9)       (winrate miner marshal 0.2 0.8)
+
+(winrate sergeant bomb 0.05 0.95)           (winrate lieutenant bomb 0.05 0.95)         (winrate captain bomb 0.05 0.95)
+(winrate sergeant spy 0.75 0.25)            (winrate lieutenant spy 0.80 0.20)          (winrate captain spy 0.85 0.15)
+(winrate sergeant scout 0.70 0.30)          (winrate lieutenant scout 0.75 0.25)        (winrate captain scout 0.80 0.20)
+(winrate sergeant miner 0.60 0.40)          (winrate lieutenant miner 0.70 0.30)        (winrate captain miner 0.75 0.25)
+(winrate sergeant sergeant 0.50 0.50)       (winrate lieutenant sergeant 0.60 0.40)     (winrate captain sergeant 0.70 0.30)
+(winrate sergeant lieutenant 0.40 0.60)     (winrate lieutenant lieutenant 0.50 0.50)   (winrate captain lieutenant 0.60 0.40)
+(winrate sergeant captain 0.35 0.65)        (winrate lieutenant captain 0.40 0.60)      (winrate captain captain 0.50 0.50)
+(winrate sergeant major 0.30 0.70)          (winrate lieutenant major 0.35 0.65)        (winrate captain major 0.40 0.60)
+(winrate sergeant marshal 0.25 0.75)        (winrate lieutenant marshal 0.30 0.70)      (winrate captain marshal 0.35 0.65)
+
+(winrate major bomb 0.05 0.95)          (winrate marshal bomb 0.05 0.95)
+(winrate major spy 0.90 0.10)           (winrate marshal spy 0.95 0.05)
+(winrate major scout 0.85 0.15)         (winrate marshal scout 0.9 0.1)
+(winrate major miner 0.80 0.20)         (winrate marshal miner 0.85 0.25)
+(winrate major sergeant 0.75 0.25)      (winrate marshal sergeant 0.80 0.20)
+(winrate major lieutenant 0.70 0.30)    (winrate marshal lieutenant 0.75 0.25)
+(winrate major captain 0.60 0.40)       (winrate marshal captain 0.70 0.30)
+(winrate major major 0.50 0.50)         (winrate marshal major 0.6 0.4)
+(winrate major marshal 0.40 0.60)       (winrate marshal marshal 0.5 0.5)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; TERMINAL
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(<= terminal
+	(role ?r)
+	(not (anyFlag ?r))
+	playingPhase)
+
+(<= terminal
+	playingPhase
+	(not (anyMobile red))
+	(not (anyMobile blue)))
+
+(<= terminal
+	(true (step 100)))
+
+(<= (anyFlag ?r)
+	(loc flag ?x ?y)
+	(occupied ?x ?y ?r))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; GOAL
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(<= (goal red 100)
+	(not (anyFlag blue)))
+
+(<= (goal blue 100)
+	(not (anyFlag red)))
+
+(<= (goal ?r 50)
+	(role ?r)
+	(anyFlag red)
+	(anyFlag blue)
+	(step 100))
+
+(<= (goal ?r 50)
+	(role ?r)
+	(anyFlag red)
+	(anyFlag blue)
+	(not (anyMobile red))
+	(not (anyMobile blue)))
+
+(<= (goal red 0)
+	(not (anyFlag red)))
+
+(<= (goal blue 0)
+	(not (anyFlag blue)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; SUPPORT
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(<= (opp ?r ?r2)
+    (role ?r)
+    (role ?r2)
+    (distinct ?r ?r2))
+
+(x 0)
+(x 1)
+(x 2)
+(x 3)
+(x 4)
+
+(y 0)
+(y 1)
+(y 2)
+(y 3)
+(y 4)
+(y 5)
+
+(<= playingPhase
+	(not (step 1))
+	(not (step 2))
+	(not (step 3))
+	(not (step 4))
+	(not (step 5))
+	(not (step 6))
+	(not (step 7))
+	(not (step 8))
+	(not (step 9))
+	(not (step 10)))
+
+(cell_to_place red 1 0 0)
+(cell_to_place red 2 1 0)
+(cell_to_place red 3 2 0)
+(cell_to_place red 4 3 0)
+(cell_to_place red 5 4 0)
+(cell_to_place red 6 0 1)
+(cell_to_place red 7 1 1)
+(cell_to_place red 8 2 1)
+(cell_to_place red 9 3 1)
+(cell_to_place red 10 4 1)
+
+(cell_to_place blue 1 0 4)
+(cell_to_place blue 2 1 4)
+(cell_to_place blue 3 2 4)
+(cell_to_place blue 4 3 4)
+(cell_to_place blue 5 4 4)
+(cell_to_place blue 6 0 5)
+(cell_to_place blue 7 1 5)
+(cell_to_place blue 8 2 5)
+(cell_to_place blue 9 3 5)
+(cell_to_place blue 10 4 5)
+
+
+(<= (adjacent ?x ?y ?x ?y2)
+	(x ?x)
+	(cellsucc ?y ?y2))
+(<= (adjacent ?x ?y ?x ?y2)
+	(x ?x)
+	(cellsucc ?y2 ?y))
+(<= (adjacent ?x ?y ?x2 ?y)
+	(x ?x)
+	(x ?x2)
+	(y ?y)
+	(cellsucc ?x ?x2))
+(<= (adjacent ?x ?y ?x2 ?y)
+	(x ?x)
+	(x ?x2)
+	(y ?y)
+	(cellsucc ?x2 ?x))
+
+(cellsucc 0 1)
+(cellsucc 1 2)
+(cellsucc 2 3)
+(cellsucc 3 4)
+(cellsucc 4 5)
+
+(<= (anyMobile ?r)
+	(role ?r)
+	playingPhase
+	(occupied ?x ?y ?r)
+	(loc ?p ?x ?y)
+	(not (immobile ?p))
+	(adjacent ?x ?y ?x2 ?y2)
+	(not (occupied ?x2 ?y2 ?r)))
+
+(<= (anyMoveFrom ?x ?y)
+	(does ?r (move ?x ?y ?x2 ?y2)))
+(<= (anyMoveFrom ?x ?y)
+	(does ?r (move_beat ?x ?y ?x2 ?y2)))
+(<= (anyMoveFrom ?x ?y)
+	(does ?r (move_lose ?x ?y ?x2 ?y2)))
+
+(<= (anyMoveTo ?x2 ?y2)
+	(does ?r (move ?x ?y ?x2 ?y2)))
+(<= (anyMoveTo ?x2 ?y2)
+	(does ?r (move_beat ?x ?y ?x2 ?y2)))
+(<= (anyMoveTo ?x2 ?y2)
+	(does ?r (move_lose ?x ?y ?x2 ?y2)))
