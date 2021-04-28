@@ -245,7 +245,7 @@ class MCTSPlayerSTOII(GamePlayerSTOII):
         new_root_nodes = list()
         for state, nodes in state_node_dict.items():
             if len(nodes) == 0:
-                new_root_nodes.append(self.make_node(None, None, None, state))
+                #new_root_nodes.append(self.make_node(None, None, None, state))
                 continue
             new_node: MCTSNodeSTOII = nodes[0]
             new_node.parent = None

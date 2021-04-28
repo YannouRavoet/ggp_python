@@ -68,7 +68,7 @@ if __name__ == "__main__":
     RUN GAMEMANAGER
     """""""""""""""
     manager = GameManager(args.port)
-    games = {"stoii_stratego_large.gdl": [30, 45, 60]}
+    games = {"stoii_stratego_large.gdl": [60, 120]}
     players = args.players
     rounds = 35
     for game_file, playclocks in games.items():

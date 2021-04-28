@@ -37,8 +37,8 @@
 (piece miner)
 (piece sergeant)
 (piece lieutenant)
-(piece captain)
-(piece major)
+;;; (piece captain)
+;;; (piece major)
 (piece marshal)
 
 (immobile flag)
@@ -245,11 +245,15 @@
 	(not (anyMobile blue)))
 
 (<= terminal
-	(true (step 100)))
+    (terminal_step ?t)
+	(true (step ?t)))
+
 
 (<= (anyFlag ?r)
 	(loc flag ?x ?y)
 	(occupied ?x ?y ?r))
+
+(terminal_step 80)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; GOAL
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -263,7 +267,8 @@
 	(role ?r)
 	(anyFlag red)
 	(anyFlag blue)
-	(step 100))
+    (terminal_step ?t)
+	(true (step ?t)))
 
 (<= (goal ?r 50)
 	(role ?r)
@@ -290,7 +295,6 @@
 (x 1)
 (x 2)
 (x 3)
-(x 4)
 
 (y 0)
 (y 1)
@@ -307,31 +311,25 @@
 	(not (step 5))
 	(not (step 6))
 	(not (step 7))
-	(not (step 8))
-	(not (step 9))
-	(not (step 10)))
+	(not (step 8)))
 
 (cell_to_place red 1 0 0)
-(cell_to_place red 2 1 0)
-(cell_to_place red 3 2 0)
-(cell_to_place red 4 3 0)
-(cell_to_place red 5 4 0)
-(cell_to_place red 6 0 1)
-(cell_to_place red 7 1 1)
-(cell_to_place red 8 2 1)
-(cell_to_place red 9 3 1)
-(cell_to_place red 10 4 1)
+(cell_to_place red 2 0 1)
+(cell_to_place red 3 1 0)
+(cell_to_place red 4 1 1)
+(cell_to_place red 5 2 0)
+(cell_to_place red 6 2 1)
+(cell_to_place red 7 3 0)
+(cell_to_place red 8 3 1)
 
 (cell_to_place blue 1 0 4)
-(cell_to_place blue 2 1 4)
-(cell_to_place blue 3 2 4)
-(cell_to_place blue 4 3 4)
-(cell_to_place blue 5 4 4)
-(cell_to_place blue 6 0 5)
-(cell_to_place blue 7 1 5)
-(cell_to_place blue 8 2 5)
-(cell_to_place blue 9 3 5)
-(cell_to_place blue 10 4 5)
+(cell_to_place blue 2 0 5)
+(cell_to_place blue 3 1 4)
+(cell_to_place blue 4 1 5)
+(cell_to_place blue 5 2 4)
+(cell_to_place blue 6 2 5)
+(cell_to_place blue 7 3 4)
+(cell_to_place blue 8 3 5)
 
 
 (<= (adjacent ?x ?y ?x ?y2)
